@@ -1,7 +1,6 @@
 package com.kienqb.dontv
 
 import android.content.Context
-import android.os.Build
 import io.github.muntashirakon.adb.AbsAdbConnectionManager
 import org.bouncycastle.asn1.x500.X500Name
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter
@@ -56,7 +55,11 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
             keyFile.writeBytes(kp.private.encoded)
             certFile.writeBytes(cert.encoded)
         }
-        setApi(Build.VERSION.SDK_INT)
+        // Deliberately NO setApi() call: CleanTV (the working reference app)
+        // leaves the manager default (API BASE), so the CNXN handshake uses
+        // the legacy protocol version + maxdata that old adbd builds (Sony
+        // Android 8/9) are most compatible with. setApi(28) switched the
+        // handshake to the skip-checksum protocol version for no benefit.
         setTimeout(60, TimeUnit.SECONDS)
     }
 
@@ -64,15 +67,50 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
     override fun getCertificate(): Certificate = certificate
     override fun getDeviceName(): String = "TidyTV"
 
-    /** Run one shell command on the TV and return its combined output. */
+    /**
+     * Run one shell command on the TV and return its combined output.
+     *
+     * Reads until a self-appended end marker instead of reading to EOF —
+     * the pattern CleanTV uses against the same library. libadb's
+     * AdbStream.read() throws IOException("Stream closed") when the peer
+     * closes the stream while the reader is waiting with an empty queue
+     * (instead of returning -1); the old readBytes()-to-EOF version turned
+     * that race into a failed connect on the user's Sony (v1.0.3/1.0.4:
+     * "Kết nối thất bại: Stream closed" right after a successful Allow in
+     * the TV's dialog). Here the reader thread swallows stream exceptions
+     * and keeps whatever output already arrived; the marker (or the
+     * deadline) ends the read, never the peer's close timing.
+     */
     fun exec(command: String): String {
-        val stream = openStream("shell:$command")
-        try {
-            val bytes = stream.openInputStream().readBytes()
-            return String(bytes, Charsets.UTF_8)
-        } finally {
-            try { stream.close() } catch (_: Exception) {}
+        val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
+        val stream = openStream("shell:$command; echo $marker")
+        val out = java.io.ByteArrayOutputStream()
+        val reader = Thread {
+            try {
+                val input = stream.openInputStream()
+                val buf = ByteArray(16 * 1024)
+                while (true) {
+                    val n = input.read(buf)
+                    if (n < 0) break
+                    synchronized(out) { out.write(buf, 0, n) }
+                    if (synchronized(out) { out.toString("UTF-8") }.contains(marker)) break
+                }
+            } catch (_: Exception) {
+                // Peer closed the stream mid-read: keep what we have.
+            }
+        }.apply { isDaemon = true; start() }
+        val deadline = System.currentTimeMillis() + 60_000
+        while (reader.isAlive && System.currentTimeMillis() < deadline) {
+            reader.join(200)
         }
+        try { stream.close() } catch (_: Exception) {}
+        if (reader.isAlive) {
+            reader.interrupt()
+            throw java.io.IOException("TV không trả lời sau 60 giây")
+        }
+        return synchronized(out) { out.toString("UTF-8") }
+            .replace("\r", "")
+            .substringBefore(marker)
     }
 
     /**
