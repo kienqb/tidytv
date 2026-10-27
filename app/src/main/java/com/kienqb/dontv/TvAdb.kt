@@ -84,6 +84,26 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
     fun exec(command: String): String {
         val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
         val stream = openStream("shell:$command; echo $marker")
+        try {
+            return readUntil(stream, marker, 60_000, throwOnTimeout = true)
+                .replace("\r", "")
+                .substringBefore(marker)
+        } finally {
+            try { stream.close() } catch (_: Exception) {}
+        }
+    }
+
+    /**
+     * Reads [stream] on a helper thread until [marker] appears in the
+     * accumulated output, the stream ends, or the deadline passes; returns
+     * what arrived. Stream exceptions are swallowed on purpose (see exec).
+     */
+    private fun readUntil(
+        stream: io.github.muntashirakon.adb.AdbStream,
+        marker: String?,
+        deadlineMs: Long,
+        throwOnTimeout: Boolean,
+    ): String {
         val out = java.io.ByteArrayOutputStream()
         val reader = Thread {
             try {
@@ -93,45 +113,73 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
                     val n = input.read(buf)
                     if (n < 0) break
                     synchronized(out) { out.write(buf, 0, n) }
-                    if (synchronized(out) { out.toString("UTF-8") }.contains(marker)) break
+                    if (marker != null &&
+                        synchronized(out) { out.toString("UTF-8") }.contains(marker)
+                    ) {
+                        break
+                    }
                 }
             } catch (_: Exception) {
                 // Peer closed the stream mid-read: keep what we have.
             }
         }.apply { isDaemon = true; start() }
-        val deadline = System.currentTimeMillis() + 60_000
+        val deadline = System.currentTimeMillis() + deadlineMs
         while (reader.isAlive && System.currentTimeMillis() < deadline) {
             reader.join(200)
         }
-        try { stream.close() } catch (_: Exception) {}
-        if (reader.isAlive) {
+        if (reader.isAlive && throwOnTimeout) {
             reader.interrupt()
-            throw java.io.IOException("TV không trả lời sau 60 giây")
+            throw java.io.IOException("TV không trả lời sau ${deadlineMs / 1000} giây")
         }
         return synchronized(out) { out.toString("UTF-8") }
-            .replace("\r", "")
-            .substringBefore(marker)
     }
 
     /**
-     * Push raw bytes to a file on the TV through a shell stream, then verify
-     * the on-device size. Returns true only when the size matches exactly.
+     * Push raw bytes to a file on the TV, then verify the on-device size.
+     * Returns true only when the size matches exactly.
+     *
+     * CleanTV's proven pattern: an `exec:` stream whose command reads an
+     * EXACT byte count from stdin, and the stream is held open until the TV
+     * echoes a marker — which only happens after the reader consumed every
+     * byte and the file is closed on disk. The previous "shell:cat > path"
+     * version closed the stream the moment the last byte was written; adbd
+     * tore the shell down before cat drained the pipe and the tail was
+     * lost (user's Sony, v1.0.5: the 636 KB launcher APK arrived
+     * incomplete and this size check caught it).
      */
     fun pushBytes(data: ByteArray, remotePath: String): Boolean {
-        val stream = openStream("shell:cat > $remotePath")
-        try {
-            val out = stream.openOutputStream()
-            var off = 0
-            while (off < data.size) {
-                val len = minOf(64 * 1024, data.size - off)
-                out.write(data, off, len)
-                off += len
-            }
-            out.flush()
-        } finally {
-            try { stream.close() } catch (_: Exception) {}
+        if (pushExact(data, remotePath, "head -c ${data.size}")) {
+            return verifySize(data, remotePath)
         }
-        val sizeOut = exec("stat -c %s $remotePath").trim()
-        return sizeOut.toLongOrNull() == data.size.toLong()
+        // Android 8 toybox has no head -c; dd reads the same exact count.
+        if (pushExact(data, remotePath, "dd bs=1 count=${data.size} 2>/dev/null")) {
+            return verifySize(data, remotePath)
+        }
+        return false
     }
+
+    private fun pushExact(data: ByteArray, remotePath: String, readerCmd: String): Boolean {
+        val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
+        return try {
+            val stream = openStream("exec:sh -c '$readerCmd > $remotePath; echo $marker'")
+            try {
+                val out = stream.openOutputStream()
+                var off = 0
+                while (off < data.size) {
+                    val len = minOf(4000, data.size - off)
+                    out.write(data, off, len)
+                    off += len
+                }
+                out.flush()
+                readUntil(stream, marker, 120_000, throwOnTimeout = false).contains(marker)
+            } finally {
+                try { stream.close() } catch (_: Exception) {}
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun verifySize(data: ByteArray, remotePath: String): Boolean =
+        exec("stat -c %s $remotePath").trim().toLongOrNull() == data.size.toLong()
 }
