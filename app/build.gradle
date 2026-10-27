@@ -1,0 +1,116 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+// Signing material lives outside the source tree. TIDYTV_KEY_PROPERTIES can
+// point straight at a key.properties file; otherwise the author's default
+// locations are tried in order. The key.properties names the keystore file
+// and its passwords (storeFile/storePassword/keyAlias/keyPassword).
+def keyPropsFile = [System.getenv('TIDYTV_KEY_PROPERTIES'),
+                    '/home/hatch/.signing-keys/tv-launcher/key.properties',
+                    "${System.getProperty('user.home')}/.signing-keys/tv-launcher/key.properties"]
+        .findAll { it != null }
+        .collect { new File(it) }
+        .find { it.exists() }
+
+android {
+    namespace 'com.kienqb.dontv'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.kienqb.dontv'
+        minSdk 26
+        targetSdk 34
+        versionCode 3
+        versionName '1.0.2'
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+    }
+
+    signingConfigs {
+        debug {
+            // The author's build machine pins a fixed debug keystore (its
+            // ~/.android resets between sessions, and a regenerated debug key
+            // breaks install -r). The file only exists there; everyone else
+            // silently gets the standard Android debug key.
+            def pinnedDebug = [System.getenv('TIDYTV_DEBUG_KEYSTORE'),
+                               '/home/hatch/workspace/tv-vibehack/build-env/debug.keystore']
+                    .findAll { it != null }
+                    .collect { new File(it) }
+                    .find { it.exists() }
+            if (pinnedDebug != null) {
+                storeFile pinnedDebug
+                storePassword 'android'
+                keyAlias 'androiddebugkey'
+                keyPassword 'android'
+            }
+        }
+        release {
+            // Same release key as the author's TV launcher share build, read
+            // from the key.properties resolved at the top of this file.
+            if (keyPropsFile != null) {
+                def keyProps = new Properties()
+                keyProps.load(new FileInputStream(keyPropsFile))
+                storeFile file(keyProps.getProperty('storeFile'))
+                storePassword keyProps.getProperty('storePassword')
+                keyAlias keyProps.getProperty('keyAlias')
+                keyPassword keyProps.getProperty('keyPassword')
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+    }
+
+    aaptOptions {
+        noCompress 'apk'
+    }
+
+    packaging {
+        resources {
+            // The three BouncyCastle jars all ship the same OSGi manifest path.
+            excludes += [
+                'META-INF/versions/9/OSGI-INF/MANIFEST.MF',
+                'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA',
+                'META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt',
+                'META-INF/NOTICE', 'META-INF/NOTICE.txt'
+            ]
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+}
+
+// A release build without the signing key must fail loudly, never silently
+// produce an unsigned APK (the key file lives outside the source tree).
+gradle.taskGraph.whenReady { graph ->
+    def wantsRelease = graph.allTasks.any { it.name.toLowerCase().contains('release') }
+    if (wantsRelease && keyPropsFile == null) {
+        throw new GradleException('No signing key.properties found (looked in $TIDYTV_KEY_PROPERTIES and ~/.signing-keys/tv-launcher/) — cannot sign the release build.')
+    }
+}
+
+dependencies {
+    implementation 'androidx.appcompat:appcompat:1.7.0'
+    implementation('com.github.MuntashirAkon:libadb-android:3.0.0') {
+        // libadb drags in the jdk15to18 BouncyCastle line; we standardise on
+        // jdk18on below, otherwise every BC class exists twice.
+        exclude group: 'org.bouncycastle', module: 'bcprov-jdk15to18'
+    }
+    implementation 'org.conscrypt:conscrypt-android:2.5.3'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+    implementation 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
+    testImplementation 'junit:junit:4.13.2'
+}

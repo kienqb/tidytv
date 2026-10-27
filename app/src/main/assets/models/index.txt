@@ -1,0 +1,158 @@
+aipro2k|Aipro2k
+aiwa-ai-pont-sa|Aiwa AI Pont SA
+amazon-fire-tv-afttiff43|Amazon Fire TV Afttiff43
+amazon-fire-tv-stick-4k-2018|Amazon Fire TV Stick 4K 2018
+amazon-fire-tv-stick-4k-2023|Amazon Fire TV Stick 4K 2023
+amazon-fire-tv-stick-4k-max-2021|Amazon Fire TV Stick 4K Max 2021
+amazon-fire-tv-stick-lite-2020|Amazon Fire TV Stick Lite 2020
+artel-cvte-mt5863|Artel Cvte Mt5863
+benq-e55-735|Benq E55 735
+benq-e55-750|Benq E55 750
+byintek-t5-max|Byintek T5 Max
+byintek-u4|Byintek U4
+cecotec-shandao|Cecotec Shandao
+challenger-32t22bt|Challenger 32t22bt
+chiq-ai-pont|Chiq AI Pont
+chiq-gtvu65|Chiq Gtvu65
+compac-atv-r2|Compac Atv R2
+dialog-viu-sei103dl|Dialog Viu Sei103dl
+eko-2k-google-tv-tennoji|Eko 2K Google TV Tennoji
+ffalcon-65s585c-pro|Ffalcon 65s585c Pro
+freebox-player-pop|Freebox Player Pop
+google-chromecast-gtv-4k|Google Chromecast Gtv 4K
+google-tv-streamer-4k-kirkwood|Google TV Streamer 4K Kirkwood
+haier-android-tv-dvb2k|Haier Android TV Dvb2k
+haier-h32s80efx|Haier H32s80efx
+hisense-e5q-pro|Hisense E5q Pro
+hisense-fire-tv-aftcibfbd1|Hisense Fire TV Aftcibfbd1
+hisense-hg9|Hisense Hg9
+hisense-hismarttv-a4-android11|Hisense Hismarttv A4 Android11
+hisense-hismarttv-a4|Hisense Hismarttv A4
+hisense-smarttv-4k-ffm|Hisense Smarttv 4K Ffm
+hisense-u75-hengshan|Hisense U75 Hengshan
+hitachi-65qledsm20|Hitachi 65qledsm20
+hitachi-cdh-le32smart21|Hitachi Cdh Le32smart21
+insignia-ns55f301na25|Insignia Ns55f301na25
+jmgo-n1s-holan|Jmgo N1s Holan
+jvc-android-tv-menlo|Jvc Android TV Menlo
+kalley-43g200|Kalley 43g200
+kalley-r10g|Kalley R10g
+kogan-gtvu65kg|Kogan Gtvu65kg
+motorola-swtv-24ae-fhd|Motorola Swtv 24ae Fhd
+mtc-uk-2k-android-tv|Mtc UK 2K Android TV
+nvidia-shield-tv-2019|Nvidia Shield TV 2019
+nvidia-shield-tv-pro-2019|Nvidia Shield TV Pro 2019
+oneplus-tv-dubai|Oneplus TV Dubai
+oneplus-tv-y1|Oneplus TV Y1
+onn-4k-plus-2025|Onn 4K Plus 2025
+onn-4k-streaming-box-2023|Onn 4K Streaming Box 2023
+panasonic-4ktv-0su|Panasonic 4ktv 0su
+panasonic-4ktv-jup|Panasonic 4ktv Jup
+panasonic-th-40hs550k|Panasonic TH 40hs550k
+philips-50pus8517|Philips 50pus8517
+philips-55oled707|Philips 55oled707
+philips-55pus7503|Philips 55pus7503
+philips-65pus8102|Philips 65pus8102
+philips-75pus8505|Philips 75pus8505
+philips-r8g-google-tv|Philips R8g Google TV
+philips-smart-4k-google-tv|Philips Smart 4K Google TV
+philips-tpm191e|Philips Tpm191e
+polytron-2k-hayward|Polytron 2K Hayward
+portronics-beem-470|Portronics Beem 470
+prismplus-q65-ultra-r10g|Prismplus Q65 Ultra R10g
+rca-ai-pont|Rca AI Pont
+redmi-mitv-antl0|Redmi Mitv Antl0
+redmi-mitv-mftp0|Redmi Mitv Mftp0
+sankey-smart2ktvse|Sankey Smart2ktvse
+sanyo-atv-r2|Sanyo Atv R2
+sharp-aquos-tve21f|Sharp Aquos Tve21f
+skyworth-sw-22sa|Skyworth SW 22sa
+skyworth-swtv-21ae|Skyworth Swtv 21ae
+skyworth-swtv-24na-4k-nf|Skyworth Swtv 24na 4K NF
+sony-bravia-4k-gb-us|Sony Bravia 4K GB US
+sony-bravia-4k-gb|Sony Bravia 4K GB
+sony-bravia-4k-ur2|Sony Bravia 4K Ur2
+sony-bravia-4k-vh2|Sony Bravia 4K Vh2
+sony-bravia-4k-vh21-eu|Sony Bravia 4K Vh21 EU
+sony-bravia-4k-vh21|Sony Bravia 4K Vh21
+sony-bravia-9-ii|Sony Bravia 9 II
+sony-bravia-ae2|Sony Bravia Ae2
+sony-bravia-bf1|Sony Bravia Bf1
+sony-bravia-tl2|Sony Bravia Tl2
+sony-bravia-vu31|Sony Bravia Vu31
+sony-kd-49x8307c|Sony KD 49x8307c
+sony-kd-55x8509c|Sony KD 55x8509c
+sony-kd-55x85j|Sony KD 55x85j
+sony-kd-55xe8596|Sony KD 55xe8596
+sony-kd-65x80j|Sony KD 65x80j
+sony-kd-65x9300d|Sony KD 65x9300d
+sony-xbr-65x900f|Sony Xbr 65x900f
+sony-xbr-x900e|Sony Xbr X900e
+stellamore-t950s|Stellamore T950s
+tcl-32l5a|Tcl 32l5a
+tcl-32s5400a|Tcl 32s5400a
+tcl-32s5k|Tcl 32s5k
+tcl-40s5400a|Tcl 40s5400a
+tcl-43c645|Tcl 43c645
+tcl-43ep660|Tcl 43ep660
+tcl-43s5400a|Tcl 43s5400a
+tcl-43s5k|Tcl 43s5k
+tcl-50ep680|Tcl 50ep680
+tcl-55c715|Tcl 55c715
+tcl-55c725|Tcl 55c725
+tcl-55c815|Tcl 55c815
+tcl-55p7k|Tcl 55p7k
+tcl-55s470g|Tcl 55s470g
+tcl-65c725|Tcl 65c725
+tcl-65c735|Tcl 65c735
+tcl-85rm7l-google-tv|Tcl 85rm7l Google TV
+tcl-ak30a5|Tcl Ak30a5
+tcl-beyondtv-rt2851|Tcl Beyondtv Rt2851
+tcl-beyondtv|Tcl Beyondtv
+tcl-beyondtv2-android-11|Tcl Beyondtv2 Android 11
+tcl-beyondtv2-latin-america|Tcl Beyondtv2 Latin America
+tcl-c755-google-tv|Tcl C755 Google TV
+tcl-g03-google-tv|Tcl G03 Google TV
+tcl-g05-google-tv|Tcl G05 Google TV
+tcl-g07-google-tv|Tcl G07 Google TV
+tcl-g08-us-google-tv|Tcl G08 US Google TV
+tcl-g09-google-tv|Tcl G09 Google TV
+tcl-g10-google-tv|Tcl G10 Google TV
+tcl-l40s66e|Tcl L40s66e
+tcl-mt9655-cn-android14|Tcl Mt9655 CN Android14
+tcl-q10g-pro|Tcl Q10g Pro
+tcl-qm6k-google-tv|Tcl Qm6k Google TV
+tcl-uniontv-latin-america|Tcl Uniontv Latin America
+telesystem-ont2hd|Telesystem Ont2hd
+thomson-32he5800|Thomson 32he5800
+thomson-t32rtl6000|Thomson T32rtl6000
+toshiba-cosmos-android-tv|Toshiba Cosmos Android TV
+toshiba-fire-tv-aftha004|Toshiba Fire TV Aftha004
+verizon-stream-tv|Verizon Stream TV
+vidda-mt9653|Vidda Mt9653
+vision-2024vision43stv|Vision 2024vision43stv
+vu-4k-lushan|VU 4K Lushan
+vu-premium-fhd-43-hamamatsucho|VU Premium Fhd 43 Hamamatsucho
+wanbo-x5-pro|Wanbo X5 Pro
+xgimi-horizon-s-pro|Xgimi Horizon S Pro
+xgimi-mogo-2|Xgimi Mogo 2
+xgimi-mogo-3-pro|Xgimi Mogo 3 Pro
+xiaomi-mi-box-s-2nd-gen|Xiaomi MI Box S 2nd Gen
+xiaomi-mi-box-s|Xiaomi MI Box S
+xiaomi-mi-tv-4a|Xiaomi MI TV 4A
+xiaomi-mitv-aesp0|Xiaomi Mitv Aesp0
+xiaomi-mitv-afmu0|Xiaomi Mitv Afmu0
+xiaomi-mitv-ansp0|Xiaomi Mitv Ansp0
+xiaomi-mitv-astp0|Xiaomi Mitv Astp0
+xiaomi-mitv-astp1|Xiaomi Mitv Astp1
+xiaomi-mitv-axfr1|Xiaomi Mitv Axfr1
+xiaomi-mitv-axso0|Xiaomi Mitv Axso0
+xiaomi-mitv-axso2|Xiaomi Mitv Axso2
+xiaomi-mitv-mffu0|Xiaomi Mitv Mffu0
+xiaomi-mitv-mooq0|Xiaomi Mitv Mooq0
+xiaomi-mitv-moor2|Xiaomi Mitv Moor2
+xiaomi-mitv-mosr4|Xiaomi Mitv Mosr4
+xiaomi-mitv-mssp3-android9|Xiaomi Mitv Mssp3 Android9
+xiaomi-mitv-mssp3|Xiaomi Mitv Mssp3
+xiaomi-mitv-mteq0|Xiaomi Mitv Mteq0
+xiaomi-tv-a-pro-2026|Xiaomi TV A Pro 2026

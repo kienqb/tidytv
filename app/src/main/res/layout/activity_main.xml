@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="TidyTV — dọn TV &amp; cài Launcher của Kiên Nguyễn"
+        android:textSize="21sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/stepLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="Bước 1/5: Kết nối tới TV"
+        android:textColor="#7DB4FF"
+        android:textSize="15sp" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ============ STEP 1: CONNECT ============ -->
+            <LinearLayout
+                android:id="@+id/step1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Trước hết, trên TV hãy bật gỡ lỗi ADB (app kết nối qua Wi-Fi, không cần cắm cáp):\n• Android TV: Cài đặt → Tùy chọn nhà phát triển → bật «Gỡ lỗi USB» — đúng mục tên này, đó là công tắc bật ADB của máy.\n• Google TV đời mới: Cài đặt → Hệ thống → Tùy chọn nhà phát triển → bật «Gỡ lỗi không dây».\nTV và thiết bị này phải cùng một mạng Wi-Fi."
+                    android:textSize="15sp" />
+
+                <EditText
+                    android:id="@+id/ipInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:hint="Địa chỉ IP của TV (ví dụ 192.168.1.50)"
+                    android:inputType="text"
+                    android:textSize="17sp" />
+
+                <Button
+                    android:id="@+id/selfIpButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="App đang chạy trên chính TV này → tự điền IP"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/portInput"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:hint="Cổng kết nối"
+                    android:inputType="number"
+                    android:text="5555"
+                    android:textSize="17sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="TV thường để 5555. Riêng TV dùng «Gỡ lỗi không dây»: cổng kết nối là số cổng hiện ngay ở màn hình Gỡ lỗi không dây (khác cổng ghép nối)."
+                    android:textSize="13.5sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Chỉ khi TV đời mới bắt ghép mã (màn hình Gỡ lỗi không dây → «Ghép nối thiết bị bằng mã»):"
+                    android:textSize="14sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/pairPortInput"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:hint="Cổng ghép nối"
+                        android:inputType="number"
+                        android:textSize="16sp" />
+
+                    <EditText
+                        android:id="@+id/pairCodeInput"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="10dp"
+                        android:layout_weight="1"
+                        android:hint="Mã 6 số"
+                        android:inputType="number"
+                        android:textSize="16sp" />
+                </LinearLayout>
+
+                <Button
+                    android:id="@+id/pairButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Ghép nối bằng mã"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/connectButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:minHeight="58dp"
+                    android:text="KẾT NỐI TỚI TV"
+                    android:textSize="18sp" />
+            </LinearLayout>
+
+            <!-- ============ STEP 2: INFO + BACKUP ============ -->
+            <LinearLayout
+                android:id="@+id/step2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvInfoText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Chọn danh sách app rác theo mẫu TV của bạn (app đã tự gợi ý, kiểm tra lại cho chắc):"
+                    android:textSize="15sp" />
+
+                <Spinner
+                    android:id="@+id/modelSpinner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:minHeight="52dp" />
+
+                <CheckBox
+                    android:id="@+id/animCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:checked="true"
+                    android:text="Giảm hiệu ứng chuyển cảnh xuống 0.5x cho TV mượt hơn"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/backupNextButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:minHeight="58dp"
+                    android:text="SAO LƯU &amp; SANG BƯỚC DỌN RÁC"
+                    android:textSize="17sp" />
+
+                <Button
+                    android:id="@+id/restoreButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Khôi phục TV về như cũ (từ bản sao lưu)"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- ============ STEP 3: DEBLOAT ============ -->
+            <LinearLayout
+                android:id="@+id/step3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/debloatSummary"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="15sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/selectAllButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="Chọn tất cả"
+                        android:textSize="14sp" />
+
+                    <Button
+                        android:id="@+id/selectNoneButton"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="10dp"
+                        android:layout_weight="1"
+                        android:text="Bỏ chọn tất cả"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/checkContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+
+                <Button
+                    android:id="@+id/disableButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="58dp"
+                    android:text="TẮT CÁC ỨNG DỤNG ĐÃ CHỌN"
+                    android:textSize="17sp" />
+
+                <Button
+                    android:id="@+id/skipDebloatButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Bỏ qua bước này →"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- ============ STEP 4: INSTALL LAUNCHER ============ -->
+            <LinearLayout
+                android:id="@+id/step4"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Cài Launcher Mod (bản share của Kiên Nguyễn: giao diện sạch kiểu Apple TV, khoá TV bằng mã TOTP + passcode, điều khiển từ xa qua Telegram) và đặt làm màn hình chính."
+                    android:textSize="15sp" />
+
+                <CheckBox
+                    android:id="@+id/googletvCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="TV này là Google TV (bấm Home vẫn về giao diện Google) → tắt luôn launcher gốc của Google"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/installHomeButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:minHeight="58dp"
+                    android:text="CÀI LAUNCHER &amp; ĐẶT LÀM MÀN HÌNH CHÍNH"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/testHomeButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:enabled="false"
+                    android:text="Mở thử launcher trên TV"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <!-- ============ STEP 5: DONE ============ -->
+            <LinearLayout
+                android:id="@+id/step5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/doneText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/restoreButton2"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:minHeight="56dp"
+                    android:text="KHÔI PHỤC TV VỀ NHƯ CŨ"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/restartButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="Ngắt kết nối, làm TV khác"
+                    android:textSize="15sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:text="Nhật ký:"
+        android:textSize="13sp" />
+
+    <ScrollView
+        android:id="@+id/logScroll"
+        android:layout_width="match_parent"
+        android:layout_height="104dp"
+        android:background="#1A1A26">
+
+        <TextView
+            android:id="@+id/logView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            android:textSize="12.5sp"
+            android:typeface="monospace" />
+    </ScrollView>
+</LinearLayout>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DonTV" parent="Theme.AppCompat.NoActionBar">
+        <item name="colorPrimary">#7B4FE0</item>
+        <item name="colorPrimaryDark">#4A2A9E</item>
+        <item name="colorAccent">#7DB4FF</item>
+        <item name="android:windowBackground">#101018</item>
+    </style>
+</resources>
