@@ -1,6 +1,6 @@
 # TidyTV
 
-App Android giúp người không rành kỹ thuật **dọn ứng dụng rác trên Android TV / Google TV qua Wi-Fi** và cài một launcher sạch có khoá trẻ em. Cài TidyTV lên điện thoại Android hoặc cài thẳng lên TV đều được — giao diện là một trình hướng dẫn 5 bước, nút to, tiếng Việt.
+App Android để **dọn ứng dụng rác trên Android TV / Google TV qua Wi-Fi** rồi cài một launcher sạch có khoá trẻ em, làm cho người không rành kỹ thuật. Cài lên điện thoại Android hoặc cài thẳng lên TV đều được. Giao diện đi từng bước một, có 5 bước, nút to, tiếng Việt.
 
 > Hướng dẫn sử dụng chi tiết cho người dùng: **https://kienqb.is-a.dev/huong-dan-tidytv/**
 > Tải bản cài đặt: mục **[Releases](../../releases)** của repo này.
@@ -11,8 +11,8 @@ App Android giúp người không rành kỹ thuật **dọn ứng dụng rác t
 2. **Nhận diện TV** (hãng, model, phiên bản Android) và tự gợi ý danh sách app rác theo mẫu máy — **158 danh sách mẫu** cho Sony, TCL, Xiaomi, Philips, Hisense, Amazon Fire TV…
 3. **Sao lưu** trạng thái hiện tại trước khi dọn (lưu trong app theo từng TV + một bản ghi trên TV).
 4. **Dọn rác**: chỉ *tắt* (disable) ứng dụng, không gỡ hẳn; app hệ thống quan trọng và launcher đang dùng được bảo vệ sẵn. Mỗi lần tắt/bật đều đọc lại trạng thái thật trên TV để kiểm chứng, không báo khống.
-5. **Cài launcher sạch** đóng gói kèm (TV Launcher Mod): màn hình chính gọn, có **khoá trẻ em bằng mã TOTP + passcode** và **điều khiển từ xa qua Telegram** (mỗi người tự tạo bot riêng của mình).
-6. **Khôi phục một chạm**: bật lại đúng những app chính TidyTV đã tắt và trả launcher gốc về làm màn hình chính.
+5. **Cài launcher** đóng gói kèm (TV Launcher Mod): màn hình chính gọn, có **khoá trẻ em bằng mã TOTP + passcode** và **điều khiển từ xa qua Telegram** (mỗi người tự tạo bot riêng của mình).
+6. **Khôi phục**: bật lại đúng những app chính TidyTV đã tắt và trả launcher gốc về làm màn hình chính.
 
 ## Cách hoạt động
 
@@ -41,7 +41,7 @@ File `app/src/main/assets/tvhome.apk` là launcher đóng gói kèm (bản share
 
 ## Nguồn gốc & ghi công
 
-TidyTV đứng trên vai hai dự án đi trước — ghi rõ để ai dùng lại cũng biết đường về nguồn:
+TidyTV được làm tiếp từ hai dự án dưới đây, ghi rõ ra đây để ai lấy mã nguồn về dùng cũng truy được về gốc:
 
 - **[CleanYourTV](https://github.com/Gathin23/cleanyourtv)** của **Gathin23** — dự án gốc về dọn TV qua Wi-Fi. Danh sách ứng dụng rác theo từng mẫu TV trong `app/src/main/assets/models/` được lấy từ bộ ví dụ (examples) của CleanYourTV. Launcher đóng gói kèm trong TidyTV (`tvhome.apk`, gói `com.gathin.tvhome`) cũng là bản chỉnh sửa từ launcher của CleanYourTV.
 - **[CleanTV by VGS](https://github.com/vgscity/vgs-cleantv)** của **VGS** — bản phát triển tiếp từ CleanYourTV, là nguồn cảm hứng trực tiếp cho cách làm của TidyTV: kết nối ADB qua Wi-Fi cho người không rành kỹ thuật, sao lưu và khôi phục một chạm.
