@@ -289,13 +289,6 @@
                     android:text="CÀI LAUNCHER &amp; ĐẶT LÀM MÀN HÌNH CHÍNH"
                     android:textSize="16sp" />
 
-                <Button
-                    android:id="@+id/testHomeButton"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:enabled="false"
-                    android:text="Mở thử launcher trên TV"
-                    android:textSize="15sp" />
             </LinearLayout>
 
             <!-- ============ STEP 5: DONE ============ -->

@@ -101,13 +101,6 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.skipDebloatButton).setOnClickListener { showStep(4) }
         findViewById<Button>(R.id.installHomeButton).setOnClickListener { doInstallHome() }
         findViewById<Button>(R.id.disableStockButton).setOnClickListener { doDisableStockHome() }
-        findViewById<Button>(R.id.testHomeButton).setOnClickListener {
-            val m = adbOrNull() ?: return@setOnClickListener
-            runBg("Mở thử launcher") {
-                m.exec("am start -n $LAUNCHER_COMPONENT")
-                log("Đã gửi lệnh mở launcher. Nhìn lên TV kiểm tra giúp nhé.")
-            }
-        }
         findViewById<Button>(R.id.restartButton).setOnClickListener {
             runBg("Ngắt kết nối") {
                 try { adb?.disconnect() } catch (_: Exception) {}
@@ -637,7 +630,6 @@ class MainActivity : AppCompatActivity() {
             }
             val won = home == LAUNCHER_PKG
             ui {
-                findViewById<Button>(R.id.testHomeButton).isEnabled = true
                 findViewById<TextView>(R.id.doneText).text =
                     if (won) "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
                     else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô Android TV bên dưới rồi bấm TẮT LAUNCHER GỐC để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
