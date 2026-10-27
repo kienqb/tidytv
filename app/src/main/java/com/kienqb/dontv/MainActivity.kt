@@ -583,6 +583,7 @@ class MainActivity : AppCompatActivity() {
     private fun doInstallHome() {
         val m = adbOrNull() ?: return
         val googleTv = findViewById<CheckBox>(R.id.googletvCheckbox).isChecked
+        val androidTv = findViewById<CheckBox>(R.id.androidtvCheckbox).isChecked
         runBg("Cài launcher") {
             val apkBytes = assets.open("tvhome.apk").readBytes()
             log("Đang gửi launcher (${apkBytes.size / 1024} KB) sang TV…")
@@ -625,6 +626,28 @@ class MainActivity : AppCompatActivity() {
                     return@runBg
                 }
             }
+            if (home != LAUNCHER_PKG && androidTv) {
+                val target = DebloatLogic.homeToDisable(home)
+                if (target != null) {
+                    log("Đang tắt launcher gốc ($target) để giành nút Home…")
+                    m.exec("pm disable-user --user 0 $target")
+                    val st = loadState(); st["stockHomeDisabled"] = target; saveState(st)
+                    home = parseHome(m.exec(
+                        "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+                    if (home != LAUNCHER_PKG) {
+                        // Safety: never leave the TV without its stock Home —
+                        // switch it back on; keep the record if even that
+                        // failed, so a later Restore can retry.
+                        log("⚠ Tắt launcher gốc vẫn chưa giành được nút Home — tự bật lại launcher gốc để TV dùng bình thường.")
+                        m.exec("pm enable $target")
+                        val stillOff = m.exec("pm list packages -d").lineSequence()
+                            .map { it.trim().removePrefix("package:") }.toSet()
+                        if (target !in stillOff) {
+                            val st2 = loadState(); st2.remove("stockHomeDisabled"); saveState(st2)
+                        }
+                    }
+                }
+            }
             if (home == LAUNCHER_PKG) {
                 log("✓ Launcher đã là màn hình chính của TV.")
             } else {
@@ -651,7 +674,9 @@ class MainActivity : AppCompatActivity() {
             val state = loadState()
             val recorded = state["disabled"]?.split(',')?.filter { it.isNotEmpty() } ?: emptyList()
             val wantGoogle = state["googleHomeDisabled"] == "1"
-            if (recorded.isEmpty() && !wantGoogle && state["anim"] != "0.5" && state["stockHome"].isNullOrEmpty()) {
+            val stockOff = state["stockHomeDisabled"]
+            val wantStock = !stockOff.isNullOrEmpty()
+            if (recorded.isEmpty() && !wantGoogle && !wantStock && state["anim"] != "0.5" && state["stockHome"].isNullOrEmpty()) {
                 log("Chưa có ghi chép thay đổi nào cho TV này — không có gì để khôi phục.")
                 return@runBg
             }
@@ -660,6 +685,7 @@ class MainActivity : AppCompatActivity() {
                 m.exec("pm enable $GOOGLE_TV_HOME")
                 m.exec("pm enable $GOOGLE_TV_SETUP")
             }
+            if (wantStock && stockOff != null) m.exec("pm enable $stockOff")
             // Verify against the TV's real disabled list; only what is truly
             // re-enabled gets cleared from the record.
             val stillOff = m.exec("pm list packages -d").lineSequence()
@@ -670,9 +696,11 @@ class MainActivity : AppCompatActivity() {
             val stillRecorded = recorded.filter { it in stillOff }
             val restoredCount = recorded.size - stillRecorded.size
             val googleOk = !wantGoogle || (GOOGLE_TV_HOME !in stillOff && GOOGLE_TV_SETUP !in stillOff)
+            val stockOk = stockOff.isNullOrEmpty() || stockOff !in stillOff
             if (stillRecorded.isEmpty()) state.remove("disabled")
             else state["disabled"] = stillRecorded.joinToString(",")
             if (googleOk) state.remove("googleHomeDisabled")
+            if (stockOk && wantStock) state.remove("stockHomeDisabled")
             // Stock Home back, verified afterwards.
             val stock = state["stockHome"]
             var homeNote = ""
@@ -698,14 +726,16 @@ class MainActivity : AppCompatActivity() {
                 state.remove("anim"); state.remove("animFrom")
             }
             saveState(state)
-            if (stillRecorded.isEmpty() && googleOk) {
+            if (stillRecorded.isEmpty() && googleOk && stockOk) {
                 log("✓ Đã khôi phục xong: bật lại $restoredCount ứng dụng" +
-                    (if (wantGoogle) " + launcher gốc Google TV" else "") + ", trả hiệu ứng về như trước.$homeNote")
+                    (if (wantGoogle) " + launcher gốc Google TV" else "") +
+                    (if (wantStock) " + launcher gốc Android TV" else "") + ", trả hiệu ứng về như trước.$homeNote")
                 toast("Đã khôi phục TV về như cũ.")
             } else {
                 log("⚠ Khôi phục chưa trọn: đã bật lại $restoredCount ứng dụng; còn chưa bật lại được: " +
                     (stillRecorded + listOfNotNull(
-                        if (wantGoogle && !googleOk) GOOGLE_TV_HOME else null)).joinToString(", ") +
+                        if (wantGoogle && !googleOk) GOOGLE_TV_HOME else null,
+                        if (wantStock && !stockOk) stockOff else null)).joinToString(", ") +
                     ". Ghi chép đã được giữ lại — kết nối lại và bấm KHÔI PHỤC lần nữa.$homeNote")
             }
         }

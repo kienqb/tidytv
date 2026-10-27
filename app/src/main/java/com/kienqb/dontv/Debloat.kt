@@ -74,6 +74,15 @@ object DebloatLogic {
     }
 
     /**
+     * Step 4's "Android TV" option: the stock launcher package that may be
+     * disabled so the new launcher can win the Home button — the package
+     * currently holding Home, unless it is protected (system pieces, the
+     * new launcher itself, this app).
+     */
+    fun homeToDisable(currentHome: String?): String? =
+        currentHome?.takeIf { it !in PROTECTED }
+
+    /**
      * Suggest the most likely model list for a TV from its brand/model/device
      * strings. Primary score = number of slug tokens (length >= 3) appearing
      * in the lowercased device description; ties are broken by the number of

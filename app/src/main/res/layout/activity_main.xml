@@ -280,6 +280,14 @@
                     android:text="TV này là Google TV (bấm Home vẫn về giao diện Google) → tắt luôn launcher gốc của Google"
                     android:textSize="15sp" />
 
+                <CheckBox
+                    android:id="@+id/androidtvCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="TV này là Android TV (bấm Home vẫn về giao diện gốc) → tắt luôn launcher gốc"
+                    android:textSize="15sp" />
+
                 <Button
                     android:id="@+id/installHomeButton"
                     android:layout_width="match_parent"
