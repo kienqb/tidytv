@@ -100,6 +100,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.disableButton).setOnClickListener { doDisable() }
         findViewById<Button>(R.id.skipDebloatButton).setOnClickListener { showStep(4) }
         findViewById<Button>(R.id.installHomeButton).setOnClickListener { doInstallHome() }
+        findViewById<Button>(R.id.disableStockButton).setOnClickListener { doDisableStockHome() }
         findViewById<Button>(R.id.testHomeButton).setOnClickListener {
             val m = adbOrNull() ?: return@setOnClickListener
             runBg("Mở thử launcher") {
@@ -583,7 +584,6 @@ class MainActivity : AppCompatActivity() {
     private fun doInstallHome() {
         val m = adbOrNull() ?: return
         val googleTv = findViewById<CheckBox>(R.id.googletvCheckbox).isChecked
-        val androidTv = findViewById<CheckBox>(R.id.androidtvCheckbox).isChecked
         runBg("Cài launcher") {
             val apkBytes = assets.open("tvhome.apk").readBytes()
             log("Đang gửi launcher (${apkBytes.size / 1024} KB) sang TV…")
@@ -626,42 +626,71 @@ class MainActivity : AppCompatActivity() {
                     return@runBg
                 }
             }
-            if (home != LAUNCHER_PKG && androidTv) {
-                val target = DebloatLogic.homeToDisable(home)
-                if (target != null) {
-                    log("Đang tắt launcher gốc ($target) để giành nút Home…")
-                    m.exec("pm disable-user --user 0 $target")
-                    val st = loadState(); st["stockHomeDisabled"] = target; saveState(st)
-                    home = parseHome(m.exec(
-                        "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
-                    if (home != LAUNCHER_PKG) {
-                        // Safety: never leave the TV without its stock Home —
-                        // switch it back on; keep the record if even that
-                        // failed, so a later Restore can retry.
-                        log("⚠ Tắt launcher gốc vẫn chưa giành được nút Home — tự bật lại launcher gốc để TV dùng bình thường.")
-                        m.exec("pm enable $target")
-                        val stillOff = m.exec("pm list packages -d").lineSequence()
-                            .map { it.trim().removePrefix("package:") }.toSet()
-                        if (target !in stillOff) {
-                            val st2 = loadState(); st2.remove("stockHomeDisabled"); saveState(st2)
-                        }
-                    }
-                }
-            }
             if (home == LAUNCHER_PKG) {
                 log("✓ Launcher đã là màn hình chính của TV.")
             } else {
-                // Not Google TV and Home not won yet: do NOT advance to the
-                // "Hoàn tất" screen — the user must pick TV Home on the TV.
-                log("⚠ Đã cài launcher nhưng TV chưa chọn làm màn hình chính (hiện là $home). Bấm nút Home trên remote, nếu TV hỏi thì chọn TV Home. Xong quay lại đây bấm lại nút cài đặt để kiểm tra.")
-                ui { findViewById<Button>(R.id.testHomeButton).isEnabled = true }
-                return@runBg
+                // Installed and set up, but the stock launcher still holds
+                // Home (some Android TV brands pin it). Disabling it is now
+                // a separate final step on the "Hoàn tất" screen, done only
+                // after the new launcher is fully in place.
+                log("Đã cài và thiết lập xong launcher — sang bước 5 để hoàn tất.")
             }
+            val won = home == LAUNCHER_PKG
             ui {
                 findViewById<Button>(R.id.testHomeButton).isEnabled = true
                 findViewById<TextView>(R.id.doneText).text =
-                    "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+                    if (won) "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+                    else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô Android TV bên dưới rồi bấm TẮT LAUNCHER GỐC để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
                 showStep(5)
+            }
+        }
+    }
+
+    // ------------------------------------------------------------- step 5
+
+    /**
+     * Step 5's Android TV action: the launcher is installed and set up by
+     * now; only here, as a deliberate final step, disable the stock launcher
+     * that still holds Home. Recorded so Restore turns it back on, and
+     * rolled back at once if Home still is not won.
+     */
+    private fun doDisableStockHome() {
+        val m = adbOrNull() ?: return
+        if (!findViewById<CheckBox>(R.id.androidtvCheckbox).isChecked) {
+            toast("Hãy tích ô Android TV trước.")
+            return
+        }
+        runBg("Tắt launcher gốc") {
+            var home = parseHome(m.exec(
+                "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+            if (home == LAUNCHER_PKG) {
+                log("Launcher mới đã là màn hình chính rồi — không cần tắt launcher gốc.")
+                return@runBg
+            }
+            val target = DebloatLogic.homeToDisable(home)
+            if (target == null) {
+                log("⚠ Màn hình chính hiện tại ($home) thuộc nhóm hệ thống được bảo vệ, app không tắt. Hãy giữ nguyên để TV dùng bình thường.")
+                return@runBg
+            }
+            log("Đang tắt launcher gốc ($target)…")
+            m.exec("pm disable-user --user 0 $target")
+            val st = loadState(); st["stockHomeDisabled"] = target; saveState(st)
+            home = parseHome(m.exec(
+                "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+            if (home == LAUNCHER_PKG) {
+                log("✓ Đã tắt launcher gốc. Bấm nút Home trên remote để về màn hình chính mới.")
+                toast("Đã tắt launcher gốc.")
+            } else {
+                // Safety: never leave the TV without its stock Home —
+                // switch it back on; keep the record if even that failed,
+                // so a later Restore can retry.
+                log("⚠ Tắt launcher gốc vẫn chưa giành được nút Home — tự bật lại launcher gốc để TV dùng bình thường.")
+                m.exec("pm enable $target")
+                val stillOff = m.exec("pm list packages -d").lineSequence()
+                    .map { it.trim().removePrefix("package:") }.toSet()
+                if (target !in stillOff) {
+                    val st2 = loadState(); st2.remove("stockHomeDisabled"); saveState(st2)
+                }
             }
         }
     }

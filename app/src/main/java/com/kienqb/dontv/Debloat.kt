@@ -74,7 +74,7 @@ object DebloatLogic {
     }
 
     /**
-     * Step 4's "Android TV" option: the stock launcher package that may be
+     * Step 5's "Android TV" option: the stock launcher package that may be
      * disabled so the new launcher can win the Home button — the package
      * currently holding Home, unless it is protected (system pieces, the
      * new launcher itself, this app).
