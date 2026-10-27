@@ -272,14 +272,6 @@
                     android:text="Cài Launcher Mod (bản share của Kiên Nguyễn: giao diện sạch kiểu Apple TV, khoá TV bằng mã TOTP + passcode, điều khiển từ xa qua Telegram) và đặt làm màn hình chính."
                     android:textSize="15sp" />
 
-                <CheckBox
-                    android:id="@+id/googletvCheckbox"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp"
-                    android:text="TV này là Google TV (bấm Home vẫn về giao diện Google) → tắt luôn launcher gốc của Google"
-                    android:textSize="15sp" />
-
                 <Button
                     android:id="@+id/installHomeButton"
                     android:layout_width="match_parent"
@@ -320,6 +312,23 @@
                     android:layout_marginTop="8dp"
                     android:minHeight="56dp"
                     android:text="TẮT LAUNCHER GỐC"
+                    android:textSize="16sp" />
+
+                <CheckBox
+                    android:id="@+id/googletvCheckbox"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="TV này là Google TV (bấm Home vẫn về giao diện Google) → tắt luôn launcher gốc của Google"
+                    android:textSize="15sp" />
+
+                <Button
+                    android:id="@+id/disableGoogleButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="56dp"
+                    android:text="TẮT LAUNCHER GOOGLE"
                     android:textSize="16sp" />
 
                 <Button

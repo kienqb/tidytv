@@ -101,6 +101,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.skipDebloatButton).setOnClickListener { showStep(4) }
         findViewById<Button>(R.id.installHomeButton).setOnClickListener { doInstallHome() }
         findViewById<Button>(R.id.disableStockButton).setOnClickListener { doDisableStockHome() }
+        findViewById<Button>(R.id.disableGoogleButton).setOnClickListener { doDisableGoogleHome() }
         findViewById<Button>(R.id.restartButton).setOnClickListener {
             runBg("Ngắt kết nối") {
                 try { adb?.disconnect() } catch (_: Exception) {}
@@ -576,7 +577,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun doInstallHome() {
         val m = adbOrNull() ?: return
-        val googleTv = findViewById<CheckBox>(R.id.googletvCheckbox).isChecked
         runBg("Cài launcher") {
             val apkBytes = assets.open("tvhome.apk").readBytes()
             log("Đang gửi launcher (${apkBytes.size / 1024} KB) sang TV…")
@@ -591,34 +591,8 @@ class MainActivity : AppCompatActivity() {
             }
             log("✓ Đã cài launcher lên TV.")
             m.exec("cmd package set-home-activity $LAUNCHER_COMPONENT")
-            var home = parseHome(m.exec(
+            val home = parseHome(m.exec(
                 "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
-            if (home != LAUNCHER_PKG && googleTv) {
-                log("Đang tắt launcher gốc của Google TV…")
-                m.exec("pm disable-user --user 0 $GOOGLE_TV_SETUP")
-                m.exec("pm disable-user --user 0 $GOOGLE_TV_HOME")
-                val state = loadState()
-                state["googleHomeDisabled"] = "1"
-                saveState(state)
-                home = parseHome(m.exec(
-                    "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
-                if (home != LAUNCHER_PKG) {
-                    // Safety: never leave a Google TV without a working Home.
-                    log("⚠ Launcher mới chưa giành được nút Home — tự bật lại launcher gốc để TV dùng bình thường.")
-                    m.exec("pm enable $GOOGLE_TV_HOME")
-                    m.exec("pm enable $GOOGLE_TV_SETUP")
-                    val stillOff = m.exec("pm list packages -d").lineSequence()
-                        .map { it.trim().removePrefix("package:") }.toSet()
-                    if (GOOGLE_TV_HOME in stillOff || GOOGLE_TV_SETUP in stillOff) {
-                        // Rollback itself failed: KEEP the state flag so a later
-                        // Restore retries re-enabling the stock launcher.
-                        log("✗ Bật lại launcher gốc chưa thành công — app đã giữ lại ghi chép, hãy dùng nút KHÔI PHỤC ở Bước 2 để thử lại.")
-                    } else {
-                        val st = loadState(); st.remove("googleHomeDisabled"); saveState(st)
-                    }
-                    return@runBg
-                }
-            }
             if (home == LAUNCHER_PKG) {
                 log("✓ Launcher đã là màn hình chính của TV.")
             } else {
@@ -632,7 +606,7 @@ class MainActivity : AppCompatActivity() {
             ui {
                 findViewById<TextView>(R.id.doneText).text =
                     if (won) "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
-                    else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô Android TV bên dưới rồi bấm TẮT LAUNCHER GỐC để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+                    else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô đúng loại TV bên dưới (Android TV hoặc Google TV) rồi bấm nút TẮT LAUNCHER tương ứng để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
                 showStep(5)
             }
         }
@@ -682,6 +656,54 @@ class MainActivity : AppCompatActivity() {
                     .map { it.trim().removePrefix("package:") }.toSet()
                 if (target !in stillOff) {
                     val st2 = loadState(); st2.remove("stockHomeDisabled"); saveState(st2)
+                }
+            }
+        }
+    }
+
+    /**
+     * Step 5's Google TV action: same idea as the Android TV one — only
+     * here, after the launcher is fully set up, disable Google TV's two
+     * Home components (launcher + setup wrapper). Recorded so Restore
+     * turns them back on; rolled back at once if Home still is not won.
+     */
+    private fun doDisableGoogleHome() {
+        val m = adbOrNull() ?: return
+        if (!findViewById<CheckBox>(R.id.googletvCheckbox).isChecked) {
+            toast("Hãy tích ô Google TV trước.")
+            return
+        }
+        runBg("Tắt launcher Google") {
+            var home = parseHome(m.exec(
+                "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+            if (home == LAUNCHER_PKG) {
+                log("Launcher mới đã là màn hình chính rồi — không cần tắt launcher Google.")
+                return@runBg
+            }
+            log("Đang tắt launcher gốc của Google TV…")
+            m.exec("pm disable-user --user 0 $GOOGLE_TV_SETUP")
+            m.exec("pm disable-user --user 0 $GOOGLE_TV_HOME")
+            val state = loadState()
+            state["googleHomeDisabled"] = "1"
+            saveState(state)
+            home = parseHome(m.exec(
+                "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+            if (home == LAUNCHER_PKG) {
+                log("✓ Đã tắt launcher Google. Bấm nút Home trên remote để về màn hình chính mới.")
+                toast("Đã tắt launcher Google.")
+            } else {
+                // Safety: never leave a Google TV without a working Home.
+                log("⚠ Launcher mới chưa giành được nút Home — tự bật lại launcher gốc để TV dùng bình thường.")
+                m.exec("pm enable $GOOGLE_TV_HOME")
+                m.exec("pm enable $GOOGLE_TV_SETUP")
+                val stillOff = m.exec("pm list packages -d").lineSequence()
+                    .map { it.trim().removePrefix("package:") }.toSet()
+                if (GOOGLE_TV_HOME in stillOff || GOOGLE_TV_SETUP in stillOff) {
+                    // Rollback itself failed: KEEP the state flag so a later
+                    // Restore retries re-enabling the stock launcher.
+                    log("✗ Bật lại launcher gốc chưa thành công — app đã giữ lại ghi chép, hãy dùng nút KHÔI PHỤC ở Bước 2 để thử lại.")
+                } else {
+                    val st = loadState(); st.remove("googleHomeDisabled"); saveState(st)
                 }
             }
         }
