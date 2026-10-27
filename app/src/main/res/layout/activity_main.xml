@@ -269,7 +269,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Cài Launcher Mod (bản share của Kiên Nguyễn: giao diện sạch kiểu Apple TV, khoá TV bằng mã TOTP + passcode, điều khiển từ xa qua Telegram) và đặt làm màn hình chính."
+                    android:text="Cài Launcher Mod (bản share của Kiên Nguyễn: giao diện sạch kiểu Apple TV, khoá TV bằng mã TOTP + passcode, điều khiển từ xa qua Telegram), đặt làm màn hình chính và bật sẵn 3 lớp bảo vệ khoá của launcher."
                     android:textSize="15sp" />
 
                 <Button

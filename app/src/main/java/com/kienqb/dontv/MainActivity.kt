@@ -602,6 +602,7 @@ class MainActivity : AppCompatActivity() {
                 // after the new launcher is fully in place.
                 log("Đã cài và thiết lập xong launcher — sang bước 5 để hoàn tất.")
             }
+            enableLockGuards(m)
             val won = home == LAUNCHER_PKG
             ui {
                 findViewById<TextView>(R.id.doneText).text =
@@ -609,6 +610,34 @@ class MainActivity : AppCompatActivity() {
                     else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô đúng loại TV bên dưới (Android TV hoặc Google TV) rồi bấm nút TẮT LAUNCHER tương ứng để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
                 showStep(5)
             }
+        }
+    }
+
+    /**
+     * Step 4 tail: switch on the launcher's three lock guards (usage access
+     * plus its two accessibility services) through the same ADB channel.
+     * The launcher's own fix-it row only opens system screens, and on some
+     * firmware those screens are missing or dead stubs, so a fresh install
+     * would otherwise sit there with the lock protection incomplete.
+     * Accessibility services of other apps already on are kept. Verified by
+     * reading the state back; a partial result only logs a warning — the
+     * install itself is already done at this point.
+     */
+    private fun enableLockGuards(m: TvAdb) {
+        log("Đang bật sẵn 3 lớp bảo vệ khoá của launcher…")
+        m.exec("cmd appops set $LAUNCHER_PKG GET_USAGE_STATS allow")
+        val current = m.exec("settings get secure enabled_accessibility_services").trim()
+        val merged = GuardLogic.mergeEnabledServices(current, GuardLogic.GUARD_SERVICES)
+        m.exec("settings put secure enabled_accessibility_services $merged")
+        m.exec("settings put secure accessibility_enabled 1")
+        val ops = m.exec("cmd appops get $LAUNCHER_PKG")
+        val services = m.exec("settings get secure enabled_accessibility_services")
+        if (GuardLogic.usageAllowed(ops) &&
+            GuardLogic.servicesEnabled(services, GuardLogic.GUARD_SERVICES)
+        ) {
+            log("✓ Đã bật 3 lớp bảo vệ khoá (quyền xem ứng dụng đang chạy + dịch vụ phím nhập + dịch vụ phím Home).")
+        } else {
+            log("⚠ Chưa bật đủ 3 lớp bảo vệ khoá. Mở Cài đặt của launcher, hàng 'Bảo vệ khoá' sẽ báo phần còn thiếu.")
         }
     }
 
