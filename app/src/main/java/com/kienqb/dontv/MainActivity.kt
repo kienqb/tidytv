@@ -1,5 +1,7 @@
 package com.kienqb.dontv
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.ArrayAdapter
@@ -12,10 +14,14 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.FileProvider
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.conscrypt.Conscrypt
 import java.io.File
+import java.io.FileOutputStream
+import java.net.HttpURLConnection
 import java.net.NetworkInterface
+import java.net.URL
 import java.security.Security
 import java.util.concurrent.Executors
 
@@ -43,6 +49,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var stepLabel: TextView
     private lateinit var logView: TextView
     private lateinit var logScroll: ScrollView
+    private lateinit var updateBanner: Button
+    private var pendingUpdate: ReleaseInfo? = null
     private val steps = HashMap<Int, View>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,6 +67,14 @@ class MainActivity : AppCompatActivity() {
         stepLabel = findViewById(R.id.stepLabel)
         logView = findViewById(R.id.logView)
         logScroll = findViewById(R.id.logScroll)
+        // A Sony Android 9 TV smeared this screen: every scroll frame left a
+        // ghost copy of the text behind (seen on the user's own TV, v1.0.2).
+        // The two scroll views now have opaque backgrounds in the layout, and
+        // rendering them in software layers keeps the old TV GPU/driver out
+        // of the composition path entirely. The UI is static text and forms,
+        // so software rendering costs nothing noticeable.
+        findViewById<ScrollView>(R.id.mainScroll).setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+        logScroll.setLayerType(View.LAYER_TYPE_SOFTWARE, null)
         steps[1] = findViewById(R.id.step1)
         steps[2] = findViewById(R.id.step2)
         steps[3] = findViewById(R.id.step3)
@@ -99,7 +115,120 @@ class MainActivity : AppCompatActivity() {
                 log("Đã ngắt kết nối.")
             }
         }
+        updateBanner = findViewById(R.id.updateBanner)
+        updateBanner.setOnClickListener { pendingUpdate?.let { startUpdateDownload(it) } }
+        maybeCheckForUpdate()
         log("Sẵn sàng. Nhập IP của TV rồi bấm KẾT NỐI.")
+    }
+
+    // -------------------------------------------------- in-app self update
+    // Releases on github.com/kienqb/tidytv are the update source. The check
+    // runs at most once a day, fetches a few KB of JSON, and only ever shows
+    // the banner — downloading the APK takes an explicit tap.
+
+    private fun currentVersionName(): String = try {
+        @Suppress("DEPRECATION")
+        packageManager.getPackageInfo(packageName, 0).versionName ?: "0"
+    } catch (_: Exception) {
+        "0"
+    }
+
+    private fun maybeCheckForUpdate() {
+        val prefs = getSharedPreferences("tidytv-update", MODE_PRIVATE)
+        val cachedVersion = prefs.getString("version", null)
+        val cachedUrl = prefs.getString("url", null)
+        if (cachedVersion != null && cachedUrl != null &&
+            AppUpdate.isNewer(cachedVersion, currentVersionName())
+        ) {
+            showUpdateBanner(ReleaseInfo(cachedVersion, cachedUrl))
+        }
+        val last = prefs.getLong("lastCheck", 0)
+        if (System.currentTimeMillis() - last < 24 * 60 * 60 * 1000L) return
+        worker.execute {
+            try {
+                val json = httpGetText("https://api.github.com/repos/kienqb/tidytv/releases/latest")
+                prefs.edit().putLong("lastCheck", System.currentTimeMillis()).apply()
+                val info = AppUpdate.parseLatestRelease(json)
+                if (info != null && AppUpdate.isNewer(info.version, currentVersionName())) {
+                    prefs.edit().putString("version", info.version)
+                        .putString("url", info.apkUrl).apply()
+                    ui { showUpdateBanner(info) }
+                } else {
+                    prefs.edit().remove("version").remove("url").apply()
+                }
+            } catch (_: Exception) {
+                // Silent: an update check must never disturb the wizard.
+            }
+        }
+    }
+
+    private fun showUpdateBanner(info: ReleaseInfo) {
+        pendingUpdate = info
+        updateBanner.text = "⬆ Có bản cập nhật TidyTV ${info.version} — bấm để tải & cài"
+        updateBanner.isEnabled = true
+        updateBanner.visibility = View.VISIBLE
+    }
+
+    private fun startUpdateDownload(info: ReleaseInfo) {
+        updateBanner.isEnabled = false
+        worker.execute {
+            try {
+                val dir = File(cacheDir, "updates").apply { mkdirs() }
+                val out = File(dir, "TidyTV-update.apk")
+                val conn = URL(info.apkUrl).openConnection() as HttpURLConnection
+                conn.connectTimeout = 15000
+                conn.readTimeout = 30000
+                conn.setRequestProperty("User-Agent", "TidyTV")
+                conn.inputStream.use { input ->
+                    val total = conn.contentLengthLong
+                    FileOutputStream(out).use { fos ->
+                        val buf = ByteArray(64 * 1024)
+                        var done = 0L
+                        while (true) {
+                            val n = input.read(buf)
+                            if (n < 0) break
+                            fos.write(buf, 0, n)
+                            done += n
+                            if (total > 0) {
+                                val pct = (done * 100 / total).toInt()
+                                ui { updateBanner.text = "Đang tải bản mới… $pct%" }
+                            }
+                        }
+                    }
+                }
+                ui {
+                    updateBanner.text = "Đã tải xong — đang mở trình cài đặt…"
+                    installUpdate(out)
+                }
+                log("Đã tải xong TidyTV ${info.version}. Nếu TV hỏi quyền cài ứng dụng không rõ nguồn gốc, hãy đồng ý rồi bấm lại nút cập nhật.")
+            } catch (e: Exception) {
+                ui {
+                    updateBanner.text = "Tải bản mới thất bại (${e.message}) — bấm để thử lại"
+                    updateBanner.isEnabled = true
+                }
+            }
+        }
+    }
+
+    private fun installUpdate(apk: File) {
+        try {
+            val uri: Uri = FileProvider.getUriForFile(this, "com.kienqb.dontv.fileprovider", apk)
+            val intent = Intent(Intent.ACTION_VIEW)
+                .setDataAndType(uri, "application/vnd.android.package-archive")
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(intent)
+        } catch (e: Exception) {
+            toast("Không mở được trình cài đặt: ${e.message}")
+        }
+    }
+
+    private fun httpGetText(url: String): String {
+        val conn = URL(url).openConnection() as HttpURLConnection
+        conn.connectTimeout = 10000
+        conn.readTimeout = 15000
+        conn.setRequestProperty("Accept", "application/vnd.github+json")
+        conn.setRequestProperty("User-Agent", "TidyTV")
+        return conn.inputStream.bufferedReader().use { it.readText() }
     }
 
     override fun onDestroy() {

@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="#101018"
     android:orientation="vertical"
     android:padding="20dp">
 
@@ -21,15 +22,31 @@
         android:textColor="#7DB4FF"
         android:textSize="15sp" />
 
+    <Button
+        android:id="@+id/updateBanner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:background="#7B4FE0"
+        android:textColor="#FFFFFF"
+        android:textSize="15sp"
+        android:visibility="gone" />
+
     <ScrollView
+        android:id="@+id/mainScroll"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_marginTop="12dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:background="#101018"
+        android:overScrollMode="never"
+        android:requiresFadingEdge="none"
+        android:scrollingCache="false">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:background="#101018"
             android:orientation="vertical">
 
             <!-- ============ STEP 1: CONNECT ============ -->
@@ -326,7 +343,8 @@
         android:id="@+id/logScroll"
         android:layout_width="match_parent"
         android:layout_height="104dp"
-        android:background="#1A1A26">
+        android:background="#1A1A26"
+        android:scrollingCache="false">
 
         <TextView
             android:id="@+id/logView"
