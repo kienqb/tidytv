@@ -123,8 +123,11 @@ class MainActivity : AppCompatActivity() {
 
     // -------------------------------------------------- in-app self update
     // Releases on github.com/kienqb/tidytv are the update source. The check
-    // runs at most once a day, fetches a few KB of JSON, and only ever shows
-    // the banner — downloading the APK takes an explicit tap.
+    // runs on every launch (a few KB of JSON) so a fix published to GitHub
+    // reaches installed copies as soon as the app is reopened — with a
+    // once-a-day check, the fix for a same-day bug (exactly the v1.0.3 ->
+    // v1.0.4 connection fix) would have waited a day to even be offered.
+    // The check only ever shows the banner; downloading takes an explicit tap.
 
     private fun currentVersionName(): String = try {
         @Suppress("DEPRECATION")
@@ -142,8 +145,6 @@ class MainActivity : AppCompatActivity() {
         ) {
             showUpdateBanner(ReleaseInfo(cachedVersion, cachedUrl))
         }
-        val last = prefs.getLong("lastCheck", 0)
-        if (System.currentTimeMillis() - last < 24 * 60 * 60 * 1000L) return
         worker.execute {
             try {
                 val json = httpGetText("https://api.github.com/repos/kienqb/tidytv/releases/latest")
@@ -326,15 +327,40 @@ class MainActivity : AppCompatActivity() {
             try { adb?.close() } catch (_: Exception) {}
             adb = null
             val m = TvAdb(this)
-            val ok = m.connect(ip, port)
-            if (!ok) {
-                log("✗ TV chưa chấp nhận kết nối. Nếu trên TV có hộp thoại «Cho phép gỡ lỗi USB?» (TV tự ghi vậy — đó là hỏi quyền ADB qua Wi-Fi) hãy bấm Cho phép rồi thử lại. TV đời mới thì phải Ghép nối bằng mã trước.")
-                try { m.close() } catch (_: Exception) {}
-                return@runBg
+            log("Nếu TV hiện hộp thoại «Cho phép gỡ lỗi USB?», hãy tích «Luôn luôn cho phép» rồi bấm Cho phép.")
+            // First-ever connection: this Sony (user's own TV, v1.0.3) dropped
+            // the attempt with "Stream closed" even AFTER the user pressed
+            // Allow in the dialog — but by then the key is authorized, so an
+            // immediate retry goes straight through. Retry before giving up,
+            // and log which stage failed so a photo of the log is enough to
+            // diagnose the next failure.
+            var connected = false
+            var lastError = ""
+            for (attempt in 1..3) {
+                var stage = "mở kết nối"
+                try {
+                    try { m.disconnect() } catch (_: Exception) {}
+                    if (!m.connect(ip, port)) {
+                        lastError = "TV từ chối kết nối"
+                        log("Lần $attempt: TV chưa chấp nhận kết nối.")
+                    } else {
+                        stage = "gửi lệnh kiểm tra"
+                        val check = m.exec("echo ok").trim()
+                        if (check == "ok") {
+                            connected = true
+                            break
+                        }
+                        lastError = "TV trả lời lạ: \"$check\""
+                        log("Lần $attempt: kết nối được nhưng TV không trả lời lệnh.")
+                    }
+                } catch (e: Exception) {
+                    lastError = "${e.javaClass.simpleName}: ${e.message}"
+                    log("Lần $attempt lỗi ở bước $stage: $lastError")
+                }
+                if (attempt < 3) Thread.sleep(2000)
             }
-            val check = m.exec("echo ok").trim()
-            if (check != "ok") {
-                log("✗ Kết nối được nhưng TV không trả lời lệnh. Thử lại sau ít giây.")
+            if (!connected) {
+                log("✗ Kết nối thất bại sau 3 lần thử ($lastError). Kiểm tra: Gỡ lỗi USB đã bật chưa, hai máy có cùng Wi-Fi không. Nếu vừa bấm Cho phép trên TV, bấm KẾT NỐI lại một lần nữa.")
                 try { m.close() } catch (_: Exception) {}
                 return@runBg
             }
