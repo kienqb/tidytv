@@ -340,7 +340,7 @@ class MainActivity : AppCompatActivity() {
                 var stage = "mở kết nối"
                 try {
                     try { m.disconnect() } catch (_: Exception) {}
-                    if (!m.connect(ip, port)) {
+                    if (!m.connectTo(ip, port)) {
                         lastError = "TV từ chối kết nối"
                         log("Lần $attempt: TV chưa chấp nhận kết nối.")
                     } else {

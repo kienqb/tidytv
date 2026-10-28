@@ -67,6 +67,37 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
     override fun getCertificate(): Certificate = certificate
     override fun getDeviceName(): String = "TidyTV"
 
+    @Volatile private var lastHost: String? = null
+    @Volatile private var lastPort: Int = 5555
+
+    /** Connect and remember where, so a dropped connection can heal itself. */
+    fun connectTo(host: String, port: Int): Boolean {
+        lastHost = host
+        lastPort = port
+        return connect(host, port)
+    }
+
+    /**
+     * Open a stream, healing a dropped connection once. When the socket
+     * under the manager dies, libadb throws IllegalStateException
+     * ("connect() must be called first") on EVERY later call — on the
+     * customer's Sony (1.0.18) the connection collapsed during the step-4
+     * push, and from then on method 3 and even the Protect button failed
+     * on the dead manager while the TV was right there. The key is
+     * already authorized by then, so a plain connect() re-establishes
+     * the session with no pairing or Allow dialog.
+     */
+    private fun openStreamHealing(destination: String): io.github.muntashirakon.adb.AdbStream {
+        try {
+            return openStream(destination)
+        } catch (e: IllegalStateException) {
+            val host = lastHost ?: throw e
+            try { disconnect() } catch (_: Exception) {}
+            if (!connect(host, lastPort)) throw e
+            return openStream(destination)
+        }
+    }
+
     /**
      * Run one shell command on the TV and return its combined output.
      *
@@ -83,7 +114,7 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
      */
     fun exec(command: String): String {
         val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
-        val stream = openStream("shell:$command; echo $marker")
+        val stream = openStreamHealing("shell:$command; echo $marker")
         try {
             return readUntil(stream, marker, 60_000, throwOnTimeout = true)
                 .replace("\r", "")
@@ -255,7 +286,7 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         report: (String) -> Unit,
     ): Boolean {
         return try {
-            val stream = openStream("exec:sh -c '$script'")
+            val stream = openStreamHealing("exec:sh -c '$script'")
             try {
                 val writeError = java.util.concurrent.atomic.AtomicReference<Exception?>()
                 val progress = PushProgress(data.size)
