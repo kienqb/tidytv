@@ -77,4 +77,24 @@ class PushSupportTest {
         assertEquals(1, PushPlan.chunks(ByteArray(6144), 6144).size)
         assertEquals(2, PushPlan.chunks(ByteArray(12_288), 6144).size)
     }
+
+    @Test
+    fun md5Hex_matchesKnownVectors() {
+        assertEquals("d41d8cd98f00b204e9800998ecf8427e", PushIntegrity.md5Hex(ByteArray(0)))
+        assertEquals(
+            "900150983cd24fb0d6963f7d28e17f72",
+            PushIntegrity.md5Hex("abc".toByteArray(Charsets.US_ASCII)),
+        )
+    }
+
+    @Test
+    fun parseMd5Sum_readsHashAndRejectsGarbage() {
+        assertEquals(
+            "900150983cd24fb0d6963f7d28e17f72",
+            PushIntegrity.parseMd5Sum("900150983cd24fb0d6963f7d28e17f72  /sdcard/x.apk"),
+        )
+        assertNull(PushIntegrity.parseMd5Sum(""))
+        assertNull(PushIntegrity.parseMd5Sum("md5sum: /sdcard/x.apk: No such file or directory"))
+        assertNull(PushIntegrity.parseMd5Sum("/system/bin/sh: md5sum: not found"))
+    }
 }

@@ -32,7 +32,11 @@ class MainActivity : AppCompatActivity() {
         const val LAUNCHER_COMPONENT = "com.gathin.tvhome/.MainActivity"
         const val GOOGLE_TV_HOME = "com.google.android.apps.tv.launcherx"
         const val GOOGLE_TV_SETUP = "com.google.android.tungsten.setupwraith"
-        const val REMOTE_APK = "/data/local/tmp/dontv-tvhome.apk"
+        // Staged on /sdcard, not /data/local/tmp: step 2's backup already
+        // proves /sdcard is writable on every TV seen, while some firmware
+        // (customer's Sony Android 8) refuses shell writes to
+        // /data/local/tmp. pm install works from /sdcard just as well.
+        const val REMOTE_APK = "/sdcard/dontv-tvhome.apk"
     }
 
     private val worker = Executors.newSingleThreadExecutor()
@@ -100,6 +104,7 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.disableButton).setOnClickListener { doDisable() }
         findViewById<Button>(R.id.skipDebloatButton).setOnClickListener { showStep(4) }
         findViewById<Button>(R.id.installHomeButton).setOnClickListener { doInstallHome() }
+        findViewById<Button>(R.id.protectOffButton).setOnClickListener { doProtectOff() }
         findViewById<Button>(R.id.disableStockButton).setOnClickListener { doDisableStockHome() }
         findViewById<Button>(R.id.disableGoogleButton).setOnClickListener { doDisableGoogleHome() }
         findViewById<Button>(R.id.restartButton).setOnClickListener {
@@ -575,6 +580,23 @@ class MainActivity : AppCompatActivity() {
 
     // ------------------------------------------------------------- step 4
 
+    /**
+     * Step 4: turn off install-time app verification (the switch behind
+     * Play Protect's install block) over ADB — for TVs whose Play Store
+     * has no Protect off-switch (the Sony Android 8 case). Read back to
+     * confirm. Helps both paths: the app's own pm install and a manual
+     * Downloader install afterwards.
+     */
+    private fun doProtectOff() {
+        val m = adbOrNull() ?: return
+        runBg("Tắt Play Protect") {
+            m.exec("settings put global package_verifier_enable 0")
+            val now = m.exec("settings get global package_verifier_enable").trim()
+            if (now == "0") log("✓ Đã tắt Play Protect (kiểm tra ứng dụng khi cài đặt).")
+            else log("Đã gửi lệnh tắt Play Protect — TV báo lại giá trị: $now")
+        }
+    }
+
     private fun doInstallHome() {
         val m = adbOrNull() ?: return
         runBg("Cài launcher") {
@@ -584,32 +606,45 @@ class MainActivity : AppCompatActivity() {
                 log("✗ Gửi file sang TV không trọn vẹn. Kiểm tra Wi-Fi rồi thử lại.")
                 return@runBg
             }
+            // Play Protect blocks installs of the unsigned-by-Google
+            // launcher on some TVs (customer's Sony Android 8: the Play
+            // Store there has no Protect off-switch). Turning the global
+            // app-verification flag off over ADB is the standard way
+            // around it for a shell install; it only affects install-time
+            // verification and the customer can re-enable it any time.
+            m.exec("settings put global package_verifier_enable 0")
+            log("Đã tắt xác minh ứng dụng trước khi cài (tránh bị Play Protect chặn).")
             val installOut = m.exec("pm install -r $REMOTE_APK")
             if (!installOut.contains("Success")) {
                 log("✗ Cài đặt thất bại: ${installOut.trim().take(120)}")
                 return@runBg
             }
             log("✓ Đã cài launcher lên TV.")
-            m.exec("cmd package set-home-activity $LAUNCHER_COMPONENT")
-            val home = parseHome(m.exec(
-                "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
-            if (home == LAUNCHER_PKG) {
-                log("✓ Launcher đã là màn hình chính của TV.")
-            } else {
-                // Installed and set up, but the stock launcher still holds
-                // Home (some Android TV brands pin it). Disabling it is now
-                // a separate final step on the "Hoàn tất" screen, done only
-                // after the new launcher is fully in place.
-                log("Đã cài và thiết lập xong launcher — sang bước 5 để hoàn tất.")
-            }
-            enableLockGuards(m)
-            val won = home == LAUNCHER_PKG
-            ui {
-                findViewById<TextView>(R.id.doneText).text =
-                    if (won) "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
-                    else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô đúng loại TV bên dưới (Android TV hoặc Google TV) rồi bấm nút TẮT LAUNCHER tương ứng để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
-                showStep(5)
-            }
+            finishInstall(m)
+        }
+    }
+
+    /** Step 4 tail: set Home, enable the lock guards, move to step 5. */
+    private fun finishInstall(m: TvAdb) {
+        m.exec("cmd package set-home-activity $LAUNCHER_COMPONENT")
+        val home = parseHome(m.exec(
+            "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+        if (home == LAUNCHER_PKG) {
+            log("✓ Launcher đã là màn hình chính của TV.")
+        } else {
+            // Installed and set up, but the stock launcher still holds
+            // Home (some Android TV brands pin it). Disabling it is now
+            // a separate final step on the "Hoàn tất" screen, done only
+            // after the new launcher is fully in place.
+            log("Đã cài và thiết lập xong launcher — sang bước 5 để hoàn tất.")
+        }
+        enableLockGuards(m)
+        val won = home == LAUNCHER_PKG
+        ui {
+            findViewById<TextView>(R.id.doneText).text =
+                if (won) "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+                else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô đúng loại TV bên dưới (Android TV hoặc Google TV) rồi bấm nút TẮT LAUNCHER tương ứng để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+            showStep(5)
         }
     }
 

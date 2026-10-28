@@ -160,7 +160,7 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         if (pushExact(data, PushPlan.headScript(data.size, remotePath, marker), marker, report) &&
             verifySize(data, remotePath)
         ) {
-            return true
+            return verifyIntegrity(data, remotePath, report)
         }
         report("Cách gửi 1 chưa xong, đang thử cách 2…")
         // Android 8 toybox has no head -c; the dd fallback reads whole
@@ -169,10 +169,35 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         if (pushExact(padded, PushPlan.ddScript(data.size, remotePath, marker), marker, report) &&
             verifySize(data, remotePath)
         ) {
-            return true
+            return verifyIntegrity(data, remotePath, report)
         }
         report("Cách gửi 2 chưa xong, đang thử cách 3 (gửi từng đoạn nhỏ, hơi chậm)…")
-        return pushViaExecChunks(data, remotePath, report)
+        return pushViaExecChunks(data, remotePath, report) &&
+            verifyIntegrity(data, remotePath, report)
+    }
+
+    /**
+     * Final gate for every push method: the transfer only counts as
+     * complete when the TV's MD5 of the staged file matches the source
+     * bytes — the same size alone can still hide corrupted content.
+     * When the TV has no md5sum, the size check already done stands.
+     */
+    private fun verifyIntegrity(
+        data: ByteArray,
+        remotePath: String,
+        report: (String) -> Unit,
+    ): Boolean {
+        val tvMd5 = try {
+            PushIntegrity.parseMd5Sum(exec("md5sum $remotePath"))
+        } catch (e: Exception) {
+            null
+        } ?: return true
+        val ok = tvMd5 == PushIntegrity.md5Hex(data)
+        report(
+            if (ok) "✓ File trên TV khớp mã kiểm tra MD5 với bản gốc."
+            else "✗ Mã kiểm tra MD5 trên TV không khớp bản gốc — file truyền bị lỗi."
+        )
+        return ok
     }
 
     /**
@@ -197,11 +222,15 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
             for ((index, part) in parts.withIndex()) {
                 val b64 = android.util.Base64.encodeToString(part, android.util.Base64.NO_WRAP)
                 val redirect = if (index == 0) ">" else ">>"
-                exec("printf %s '$b64' | base64 -d $redirect $remotePath")
+                val out = exec("printf %s '$b64' | base64 -d $redirect $remotePath")
                 sent += part.size
                 if (index == 0 && !verifySizePrefix(part.size, remotePath)) {
-                    // E.g. no base64 on the TV: fail fast instead of
-                    // sending a hundred doomed chunks.
+                    // E.g. no base64 on the TV, or the folder refuses the
+                    // write: fail fast instead of sending a hundred doomed
+                    // chunks, and put the TV's own words in the log so a
+                    // photo of it names the cause.
+                    val why = out.trim().replace('\n', ' ').take(100)
+                    if (why.isNotEmpty()) report("TV trả lời ở đoạn đầu: $why")
                     return false
                 }
                 progress.onWritten(sent)?.let { report("Đã gửi $it%…") }

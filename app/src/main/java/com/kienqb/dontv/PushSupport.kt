@@ -47,6 +47,24 @@ object PushPlan {
     }
 }
 
+/** Whole-file integrity: the push only counts as done when the TV's MD5 matches. */
+object PushIntegrity {
+
+    /** Lowercase hex MD5 of [data]. */
+    fun md5Hex(data: ByteArray): String =
+        java.security.MessageDigest.getInstance("MD5").digest(data)
+            .joinToString("") { "%02x".format(it) }
+
+    /**
+     * `md5sum <file>` prints "<md5>  <path>". Returns the 32-char hash, or
+     * null when the output holds none (tool missing, error text...).
+     */
+    fun parseMd5Sum(output: String): String? {
+        val token = output.trim().split(Regex("\\s+")).firstOrNull()?.lowercase() ?: return null
+        return if (token.length == 32 && token.all { it in '0'..'9' || it in 'a'..'f' }) token else null
+    }
+}
+
 /** Fires each 10% milestone exactly once as bytes are written. */
 class PushProgress(private val total: Int) {
 
