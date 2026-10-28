@@ -103,7 +103,8 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.selectNoneButton).setOnClickListener { setAllChecks(false) }
         findViewById<Button>(R.id.disableButton).setOnClickListener { doDisable() }
         findViewById<Button>(R.id.skipDebloatButton).setOnClickListener { showStep(4) }
-        findViewById<Button>(R.id.installHomeButton).setOnClickListener { doInstallHome() }
+        findViewById<Button>(R.id.installHomeButton).setOnClickListener { doInstallHome(LauncherChoice.PASSWORD) }
+        findViewById<Button>(R.id.installNopassButton).setOnClickListener { doInstallHome(LauncherChoice.NOPASS) }
         findViewById<Button>(R.id.protectOffButton).setOnClickListener { doProtectOff() }
         findViewById<Button>(R.id.disableStockButton).setOnClickListener { doDisableStockHome() }
         findViewById<Button>(R.id.disableGoogleButton).setOnClickListener { doDisableGoogleHome() }
@@ -597,35 +598,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun doInstallHome() {
+    private fun doInstallHome(choice: LauncherChoice) {
         val m = adbOrNull() ?: return
         runBg("Cài launcher") {
-            val apkBytes = assets.open("tvhome.apk").readBytes()
+            val apkBytes = assets.open(choice.assetName).readBytes()
             log("Đang gửi launcher (${apkBytes.size / 1024} KB) sang TV…")
             if (!m.pushBytes(apkBytes, REMOTE_APK) { msg -> log(msg) }) {
                 log("✗ Gửi file sang TV không trọn vẹn. Kiểm tra Wi-Fi rồi thử lại.")
                 return@runBg
             }
-            // Play Protect blocks installs of the unsigned-by-Google
-            // launcher on some TVs (customer's Sony Android 8: the Play
-            // Store there has no Protect off-switch). Turning the global
-            // app-verification flag off over ADB is the standard way
-            // around it for a shell install; it only affects install-time
-            // verification and the customer can re-enable it any time.
-            m.exec("settings put global package_verifier_enable 0")
-            log("Đã tắt xác minh ứng dụng trước khi cài (tránh bị Play Protect chặn).")
+            if (choice.lockGuards) {
+                // Play Protect blocks installs of the unsigned-by-Google
+                // launcher on some TVs (customer's Sony Android 8: the Play
+                // Store there has no Protect off-switch). Turning the global
+                // app-verification flag off over ADB is the standard way
+                // around it for a shell install; it only affects install-time
+                // verification and the customer can re-enable it any time.
+                // The NOPASS edition declares no accessibility services, so
+                // there is nothing for Protect to block and this stays on.
+                m.exec("settings put global package_verifier_enable 0")
+                log("Đã tắt xác minh ứng dụng trước khi cài (tránh bị Play Protect chặn).")
+            } else {
+                log("Bản không mật khẩu: không có dịch vụ trợ năng nên Play Protect không chặn, không cần tắt kiểm tra khi cài.")
+            }
             val installOut = m.exec("pm install -r $REMOTE_APK")
             if (!installOut.contains("Success")) {
                 log("✗ Cài đặt thất bại: ${installOut.trim().take(120)}")
                 return@runBg
             }
             log("✓ Đã cài launcher lên TV.")
-            finishInstall(m)
+            finishInstall(m, choice)
         }
     }
 
-    /** Step 4 tail: set Home, enable the lock guards, move to step 5. */
-    private fun finishInstall(m: TvAdb) {
+    /** Step 4 tail: set Home, enable the lock guards (password edition
+     * only), move to step 5. */
+    private fun finishInstall(m: TvAdb, choice: LauncherChoice) {
         m.exec("cmd package set-home-activity $LAUNCHER_COMPONENT")
         val home = parseHome(m.exec(
             "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
@@ -638,7 +646,11 @@ class MainActivity : AppCompatActivity() {
             // after the new launcher is fully in place.
             log("Đã cài và thiết lập xong launcher — sang bước 5 để hoàn tất.")
         }
-        enableLockGuards(m)
+        if (choice.lockGuards) {
+            enableLockGuards(m)
+        } else {
+            log("Bản không mật khẩu không có bảo vệ khoá — bỏ qua bước bật 3 lớp bảo vệ.")
+        }
         val won = home == LAUNCHER_PKG
         ui {
             findViewById<TextView>(R.id.doneText).text =

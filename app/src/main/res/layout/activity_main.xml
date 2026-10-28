@@ -269,14 +269,14 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Cài Launcher Mod (bản share của Kiên Nguyễn: giao diện sạch kiểu Apple TV, khoá TV bằng mã TOTP + passcode, điều khiển từ xa qua Telegram), đặt làm màn hình chính và bật sẵn 3 lớp bảo vệ khoá của launcher."
+                    android:text="Cài Launcher Mod (bản share của Kiên Nguyễn, giao diện sạch kiểu Apple TV) và đặt làm màn hình chính. Có 2 bản: CÓ MẬT KHẨU — khoá TV bằng mã TOTP + passcode, điều khiển từ xa qua Telegram, app bật sẵn 3 lớp bảo vệ khoá. KHÔNG MẬT KHẨU — không có tính năng khoá, bù lại không bị Play Protect chặn cài, hợp với người không dùng mật khẩu và TV không tắt được Play Protect."
                     android:textSize="15sp" />
 
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="14dp"
-                    android:text="Nếu TV bị Play Protect chặn cài launcher, hoặc trong Cài đặt Google Play không có nút tắt Protect: bấm nút này trước khi cài."
+                    android:text="Nếu TV bị Play Protect chặn cài launcher (bản Có mật khẩu), hoặc trong Cài đặt Google Play không có nút tắt Protect: bấm nút này trước khi cài, hoặc cài bản Không mật khẩu ở dưới."
                     android:textSize="14sp" />
 
                 <Button
@@ -293,7 +293,16 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:minHeight="58dp"
-                    android:text="CÀI LAUNCHER &amp; ĐẶT LÀM MÀN HÌNH CHÍNH"
+                    android:text="CÀI ĐẶT LAUNCHER CÓ MẬT KHẨU"
+                    android:textSize="16sp" />
+
+                <Button
+                    android:id="@+id/installNopassButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:minHeight="58dp"
+                    android:text="CÀI ĐẶT LAUNCHER KHÔNG MẬT KHẨU"
                     android:textSize="16sp" />
 
             </LinearLayout>
