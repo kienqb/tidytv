@@ -29,6 +29,22 @@ object PushPlan {
     fun ddScript(size: Int, remotePath: String, marker: String): String =
         "dd bs=$BLOCK count=${blockCount(size)} iflag=fullblock > $remotePath 2>/dev/null; " +
             "truncate -s $size $remotePath; echo $marker"
+
+    /** Raw bytes per chunk for the exec-command fallback (base64 of this is 8192 chars). */
+    const val EXEC_CHUNK = 6144
+
+    /** Split [data] into consecutive chunks of at most [chunkSize] bytes. */
+    fun chunks(data: ByteArray, chunkSize: Int): List<ByteArray> {
+        if (data.isEmpty()) return emptyList()
+        val out = ArrayList<ByteArray>((data.size + chunkSize - 1) / chunkSize)
+        var off = 0
+        while (off < data.size) {
+            val len = minOf(chunkSize, data.size - off)
+            out.add(data.copyOfRange(off, off + len))
+            off += len
+        }
+        return out
+    }
 }
 
 /** Fires each 10% milestone exactly once as bytes are written. */

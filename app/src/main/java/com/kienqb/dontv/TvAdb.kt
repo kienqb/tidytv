@@ -166,9 +166,58 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         // Android 8 toybox has no head -c; the dd fallback reads whole
         // blocks of zero-padded data and truncates back to the exact size.
         val padded = data.copyOf(PushPlan.paddedSize(data.size))
-        return pushExact(padded, PushPlan.ddScript(data.size, remotePath, marker), marker, report) &&
+        if (pushExact(padded, PushPlan.ddScript(data.size, remotePath, marker), marker, report) &&
             verifySize(data, remotePath)
+        ) {
+            return true
+        }
+        report("Cách gửi 2 chưa xong, đang thử cách 3 (gửi từng đoạn nhỏ, hơi chậm)…")
+        return pushViaExecChunks(data, remotePath, report)
     }
+
+    /**
+     * Last-resort push: the file goes over in small base64 chunks, each an
+     * independent shell command appended to the file. Some vendor adbd
+     * builds stop draining an exec stream's stdin after ~64 KB (customer's
+     * Sony on 1.0.16: both stream attempts stalled at exactly 10% and
+     * died), which no stream method survives; plain commands are the
+     * channel steps 2–3 already proved works on that TV. Slower — one
+     * round trip per 6 KB — but each chunk is verified and reported.
+     */
+    private fun pushViaExecChunks(
+        data: ByteArray,
+        remotePath: String,
+        report: (String) -> Unit,
+    ): Boolean {
+        return try {
+            exec("rm -f $remotePath")
+            val progress = PushProgress(data.size)
+            var sent = 0
+            val parts = PushPlan.chunks(data, PushPlan.EXEC_CHUNK)
+            for ((index, part) in parts.withIndex()) {
+                val b64 = android.util.Base64.encodeToString(part, android.util.Base64.NO_WRAP)
+                val redirect = if (index == 0) ">" else ">>"
+                exec("printf %s '$b64' | base64 -d $redirect $remotePath")
+                sent += part.size
+                if (index == 0 && !verifySizePrefix(part.size, remotePath)) {
+                    // E.g. no base64 on the TV: fail fast instead of
+                    // sending a hundred doomed chunks.
+                    return false
+                }
+                progress.onWritten(sent)?.let { report("Đã gửi $it%…") }
+            }
+            verifySize(data, remotePath)
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun verifySizePrefix(expected: Int, remotePath: String): Boolean =
+        try {
+            exec("stat -c %s $remotePath").trim().toLongOrNull() == expected.toLong()
+        } catch (_: Exception) {
+            false
+        }
 
     private fun pushExact(
         data: ByteArray,
@@ -219,6 +268,9 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         }
 
     private companion object {
-        const val PUSH_DEADLINE_MS = 60_000L
+        // A healthy stream push of ~660 KB takes seconds; 30 s per attempt
+        // is generous, and failing faster gets the user to the next method
+        // (or a clear error) sooner.
+        const val PUSH_DEADLINE_MS = 30_000L
     }
 }

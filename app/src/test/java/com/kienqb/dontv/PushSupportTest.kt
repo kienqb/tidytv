@@ -56,4 +56,25 @@ class PushSupportTest {
         assertNull(p.onWritten(65_550))
         assertEquals(10, p.onWritten(65_551))
     }
+
+    @Test
+    fun chunks_splitAtSizeAndReassembleExactly() {
+        val data = ByteArray(10_000) { (it % 251).toByte() }
+        val parts = PushPlan.chunks(data, 6144)
+        assertEquals(listOf(6144, 3856), parts.map { it.size })
+        val back = ByteArray(data.size)
+        var off = 0
+        for (part in parts) {
+            part.copyInto(back, off)
+            off += part.size
+        }
+        assertEquals(data.toList(), back.toList())
+    }
+
+    @Test
+    fun chunks_handleEmptyAndExactMultiple() {
+        assertEquals(0, PushPlan.chunks(ByteArray(0), 6144).size)
+        assertEquals(1, PushPlan.chunks(ByteArray(6144), 6144).size)
+        assertEquals(2, PushPlan.chunks(ByteArray(12_288), 6144).size)
+    }
 }
