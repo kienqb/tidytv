@@ -580,7 +580,7 @@ class MainActivity : AppCompatActivity() {
         runBg("Cài launcher") {
             val apkBytes = assets.open("tvhome.apk").readBytes()
             log("Đang gửi launcher (${apkBytes.size / 1024} KB) sang TV…")
-            if (!m.pushBytes(apkBytes, REMOTE_APK)) {
+            if (!m.pushBytes(apkBytes, REMOTE_APK) { msg -> log(msg) }) {
                 log("✗ Gửi file sang TV không trọn vẹn. Kiểm tra Wi-Fi rồi thử lại.")
                 return@runBg
             }

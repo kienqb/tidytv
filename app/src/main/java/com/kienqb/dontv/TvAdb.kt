@@ -146,32 +146,63 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
      * tore the shell down before cat drained the pipe and the tail was
      * lost (user's Sony, v1.0.5: the 636 KB launcher APK arrived
      * incomplete and this size check caught it).
+     *
+     * Every attempt is bounded by [PUSH_DEADLINE_MS]: the writer runs on
+     * its own thread and shares that one deadline with the wait for the
+     * marker, so a TV that stops draining the stream mid-push fails the
+     * attempt instead of hanging the step forever (customer report on
+     * 1.0.15: stuck at "Đang gửi launcher…" for 10+ minutes, no error —
+     * the old write loop had no deadline at all). [report] receives
+     * progress lines and the retry notice for the caller's log.
      */
-    fun pushBytes(data: ByteArray, remotePath: String): Boolean {
-        if (pushExact(data, remotePath, "head -c ${data.size}")) {
-            return verifySize(data, remotePath)
+    fun pushBytes(data: ByteArray, remotePath: String, report: (String) -> Unit = {}): Boolean {
+        val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
+        if (pushExact(data, PushPlan.headScript(data.size, remotePath, marker), marker, report) &&
+            verifySize(data, remotePath)
+        ) {
+            return true
         }
-        // Android 8 toybox has no head -c; dd reads the same exact count.
-        if (pushExact(data, remotePath, "dd bs=1 count=${data.size} 2>/dev/null")) {
-            return verifySize(data, remotePath)
-        }
-        return false
+        report("Cách gửi 1 chưa xong, đang thử cách 2…")
+        // Android 8 toybox has no head -c; the dd fallback reads whole
+        // blocks of zero-padded data and truncates back to the exact size.
+        val padded = data.copyOf(PushPlan.paddedSize(data.size))
+        return pushExact(padded, PushPlan.ddScript(data.size, remotePath, marker), marker, report) &&
+            verifySize(data, remotePath)
     }
 
-    private fun pushExact(data: ByteArray, remotePath: String, readerCmd: String): Boolean {
-        val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
+    private fun pushExact(
+        data: ByteArray,
+        script: String,
+        marker: String,
+        report: (String) -> Unit,
+    ): Boolean {
         return try {
-            val stream = openStream("exec:sh -c '$readerCmd > $remotePath; echo $marker'")
+            val stream = openStream("exec:sh -c '$script'")
             try {
-                val out = stream.openOutputStream()
-                var off = 0
-                while (off < data.size) {
-                    val len = minOf(4000, data.size - off)
-                    out.write(data, off, len)
-                    off += len
-                }
-                out.flush()
-                readUntil(stream, marker, 120_000, throwOnTimeout = false).contains(marker)
+                val writeError = java.util.concurrent.atomic.AtomicReference<Exception?>()
+                val progress = PushProgress(data.size)
+                val writer = Thread {
+                    try {
+                        val out = stream.openOutputStream()
+                        var off = 0
+                        while (off < data.size) {
+                            val len = minOf(4000, data.size - off)
+                            out.write(data, off, len)
+                            off += len
+                            progress.onWritten(off)?.let { report("Đã gửi $it%…") }
+                        }
+                        out.flush()
+                    } catch (e: Exception) {
+                        writeError.set(e)
+                    }
+                }.apply { isDaemon = true; start() }
+                val echoed = readUntil(stream, marker, PUSH_DEADLINE_MS, throwOnTimeout = false)
+                    .contains(marker)
+                // Closing the stream first is what unblocks a writer stuck
+                // on a peer that stopped draining.
+                try { stream.close() } catch (_: Exception) {}
+                writer.join(2_000)
+                echoed && !writer.isAlive && writeError.get() == null
             } finally {
                 try { stream.close() } catch (_: Exception) {}
             }
@@ -181,5 +212,13 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
     }
 
     private fun verifySize(data: ByteArray, remotePath: String): Boolean =
-        exec("stat -c %s $remotePath").trim().toLongOrNull() == data.size.toLong()
+        try {
+            exec("stat -c %s $remotePath").trim().toLongOrNull() == data.size.toLong()
+        } catch (_: Exception) {
+            false
+        }
+
+    private companion object {
+        const val PUSH_DEADLINE_MS = 60_000L
+    }
 }
