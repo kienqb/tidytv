@@ -39,10 +39,13 @@ class MainActivity : AppCompatActivity() {
         // with that source; do not improvise extra packages here.
         const val GOOGLE_TV_HOME = "com.google.android.apps.tv.launcherx"
         const val GOOGLE_TV_SETUP = "com.google.android.tungsten.setupwraith"
-        // Staged on /sdcard, not /data/local/tmp: step 2's backup already
-        // proves /sdcard is writable on every TV seen, while some firmware
-        // (customer's Sony Android 8) refuses shell writes to
-        // /data/local/tmp. pm install works from /sdcard just as well.
+        // The APK is STAGED on /sdcard, not /data/local/tmp: step 2's
+        // backup already proves /sdcard is writable on every TV seen,
+        // while some firmware (customer's Sony Android 8) refuses shell
+        // writes to /data/local/tmp. Installing is a separate matter —
+        // some firmware's SELinux policy also bars system_server from
+        // READING /sdcard (avc denied, 29 Oct 2026), so doInstallHome
+        // escalates through InstallPlan.attempts after staging here.
         const val REMOTE_APK = "/sdcard/dontv-tvhome.apk"
     }
 
@@ -638,9 +641,22 @@ class MainActivity : AppCompatActivity() {
             } else {
                 log("Bản không mật khẩu: không có dịch vụ trợ năng nên Play Protect không chặn, không cần tắt kiểm tra khi cài.")
             }
-            val installOut = m.exec("pm install -r $REMOTE_APK", AdbTimeout.INSTALL_MS)
-            if (!installOut.contains("Success")) {
-                log("✗ Cài đặt thất bại: ${installOut.trim().take(120)}")
+            // Install escalates through InstallPlan.attempts: plain
+            // /sdcard first (fine on most TVs); if the firmware's
+            // SELinux policy bars system_server from reading /sdcard
+            // (avc denied … sdcardfs, customer TV 29 Oct 2026), stage
+            // via /data/local/tmp, then stream the APK over stdin.
+            val attempts = InstallPlan.attempts(REMOTE_APK, apkBytes.size)
+            var installed = false
+            var lastOut = ""
+            for ((idx, cmd) in attempts.withIndex()) {
+                if (idx > 0) log("Đường cài ${idx + 1}/${attempts.size}: thử cách khác…")
+                lastOut = m.exec(cmd, AdbTimeout.INSTALL_MS)
+                if (InstallPlan.succeeded(lastOut)) { installed = true; break }
+                log("Đường cài ${idx + 1} chưa được: ${lastOut.trim().take(200)}")
+            }
+            if (!installed) {
+                log("✗ Cài đặt thất bại ở cả ${attempts.size} đường cài. Lỗi cuối: ${lastOut.trim().take(300)}")
                 return@runBg
             }
             log("✓ Đã cài launcher lên TV.")
