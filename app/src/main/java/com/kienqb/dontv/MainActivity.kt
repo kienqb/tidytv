@@ -730,7 +730,7 @@ class MainActivity : AppCompatActivity() {
                 won ->
                     "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
                 else ->
-                    "Đã cài và kiểm chứng xong launcher mới (đã có mặt và đang bật trên TV), nhưng launcher mới CHƯA là màn hình chính.\n\n⚠ LƯU Ý QUAN TRỌNG: hãy bấm nút Home trên remote — nếu TV hỏi chọn màn hình chính, chọn launcher mới. Chỉ khi bấm Home thấy màn hình launcher mới thì bước 5 mới tắt được launcher gốc; app sẽ tự kiểm chứng lại ngay trước khi tắt.\n\nNếu bấm Home vẫn về giao diện gốc: cứ để TV dùng bình thường, KHÔNG cố tắt launcher gốc, và báo người hỗ trợ.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+                    "Đã cài và kiểm chứng xong launcher mới (đã có mặt và đang bật trên TV), nhưng launcher mới CHƯA là màn hình chính.\n\n⚠ LƯU Ý QUAN TRỌNG: hãy bấm nút Home trên remote — nếu TV hỏi chọn màn hình chính, chọn launcher mới. Chỉ khi bấm Home thấy màn hình launcher mới thì bước 5 mới tắt được launcher gốc; app sẽ tự kiểm chứng lại ngay trước khi tắt.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
             }
             showStep(5)
         }
