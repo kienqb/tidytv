@@ -87,6 +87,23 @@ class DebloatLogicTest {
     }
 
     @Test
+    fun suggestModel_neverPicksTheGenericFallback() {
+        // "generic" is a single-token slug, so its best possible score is
+        // 1 — under the >= 2 threshold even when the TV's own strings
+        // contain the word. The fallback is chosen by the UI, never by
+        // the matcher.
+        val models = listOf(
+            TvModel("generic", "Mẫu chung an toàn"),
+            TvModel("sony-bravia-vh2", "Sony Bravia VH2"),
+        )
+        assertEquals(
+            "sony-bravia-vh2",
+            DebloatLogic.suggestModel(models, "sony", "bravia generic tv")?.slug,
+        )
+        assertNull(DebloatLogic.suggestModel(models, "generic", "android tv"))
+    }
+
+    @Test
     fun suggestModel_returnsNullWhenWeak() {
         val models = listOf(TvModel("tcl-c645", "TCL C645"))
         assertNull(DebloatLogic.suggestModel(models, "UnknownBrand", "SomeModel"))

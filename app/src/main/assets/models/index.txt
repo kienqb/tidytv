@@ -156,3 +156,4 @@ xiaomi-mitv-mssp3-android9|Xiaomi Mitv Mssp3 Android9
 xiaomi-mitv-mssp3|Xiaomi Mitv Mssp3
 xiaomi-mitv-mteq0|Xiaomi Mitv Mteq0
 xiaomi-tv-a-pro-2026|Xiaomi TV A Pro 2026
+generic|Mẫu chung an toàn (cho TV chưa có danh sách riêng)

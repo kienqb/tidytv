@@ -60,7 +60,12 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         // the legacy protocol version + maxdata that old adbd builds (Sony
         // Android 8/9) are most compatible with. setApi(28) switched the
         // handshake to the skip-checksum protocol version for no benefit.
-        setTimeout(60, TimeUnit.SECONDS)
+        // The manager timeout bounds connect + stream setup: 30 s is long
+        // enough for a slow handshake on an old TV, short enough that a
+        // TV whose Wi-Fi dozed off with its screen cannot stall a step
+        // for a full minute. Per-command reads have their own, shorter
+        // deadline (see AdbTimeout).
+        setTimeout(30, TimeUnit.SECONDS)
     }
 
     override fun getPrivateKey(): PrivateKey = privateKey
@@ -112,11 +117,11 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
      * and keeps whatever output already arrived; the marker (or the
      * deadline) ends the read, never the peer's close timing.
      */
-    fun exec(command: String): String {
+    fun exec(command: String, deadlineMs: Long = AdbTimeout.EXEC_MS): String {
         val marker = "__TDV_" + System.nanoTime().toString(16) + "__"
         val stream = openStreamHealing("shell:$command; echo $marker")
         try {
-            return readUntil(stream, marker, 60_000, throwOnTimeout = true)
+            return readUntil(stream, marker, deadlineMs, throwOnTimeout = true)
                 .replace("\r", "")
                 .substringBefore(marker)
         } finally {
@@ -160,7 +165,7 @@ class TvAdb(context: Context) : AbsAdbConnectionManager() {
         }
         if (reader.isAlive && throwOnTimeout) {
             reader.interrupt()
-            throw java.io.IOException("TV không trả lời sau ${deadlineMs / 1000} giây")
+            throw java.io.IOException(AdbTimeout.message(deadlineMs / 1000))
         }
         return synchronized(out) { out.toString("UTF-8") }
     }

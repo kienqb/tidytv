@@ -403,6 +403,16 @@ class MainActivity : AppCompatActivity() {
                 if (suggestion != null) {
                     spinner.setSelection(models.indexOf(suggestion) + 1)
                     log("App gợi ý danh sách: ${suggestion.name} (đối chiếu lại trên màn hình Bước 2).")
+                } else {
+                    // No model list fits this TV (new or obscure model):
+                    // fall back to the small generic safe list instead of
+                    // leaving step 3 empty. Its slug is a single token, so
+                    // suggestModel can never pick it by accident.
+                    val generic = models.firstOrNull { it.slug == "generic" }
+                    if (generic != null) {
+                        spinner.setSelection(models.indexOf(generic) + 1)
+                        log("Chưa có danh sách riêng cho mẫu TV này — app chọn sẵn Mẫu chung an toàn (chỉ tắt app quảng cáo và app tuỳ chọn không dùng). Kiểm tra lại ở Bước 3, bỏ tích mục nào muốn giữ.")
+                    }
                 }
                 showStep(2)
             }
@@ -621,7 +631,7 @@ class MainActivity : AppCompatActivity() {
             } else {
                 log("Bản không mật khẩu: không có dịch vụ trợ năng nên Play Protect không chặn, không cần tắt kiểm tra khi cài.")
             }
-            val installOut = m.exec("pm install -r $REMOTE_APK")
+            val installOut = m.exec("pm install -r $REMOTE_APK", AdbTimeout.INSTALL_MS)
             if (!installOut.contains("Success")) {
                 log("✗ Cài đặt thất bại: ${installOut.trim().take(120)}")
                 return@runBg

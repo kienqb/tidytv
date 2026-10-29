@@ -1,0 +1,24 @@
+# MẪU CHUNG AN TOÀN — cho TV chưa có danh sách riêng trong app.
+# Chỉ gồm các ứng dụng tuỳ chọn, quảng cáo/theo dõi và dịch vụ phụ mà tắt
+# đi không ảnh hưởng việc xem TV. Bước 3 chỉ hiện mục nào TV thật sự có
+# cài, và người dùng bỏ tích được từng mục trước khi tắt.
+tv.samba.ssm # Samba TV — quảng cáo và theo dõi trên TV
+com.android.adservices.api # Dịch vụ quảng cáo của Google
+fusion.android.tv.demo # Chế độ demo bán hàng (retail demo)
+com.xm.webcontent # Nội dung web/quảng cáo của Xiaomi
+com.miui.tv.analytics # Phân tích/thống kê của Xiaomi
+com.xiaomi.statistic # Thống kê của Xiaomi
+com.tcl.esticker # Quảng cáo dán màn hình của TCL
+com.sony.dtv.sonyselect # Sony Select — gợi ý nội dung của Sony
+com.netflix.ninja # Netflix (tắt nếu không dùng)
+com.amazon.amazonvideo.livingroom # Prime Video (tắt nếu không dùng)
+com.google.android.videos # Google Play Phim (dịch vụ đã ngừng)
+com.google.android.play.games # Google Play Games trên TV
+com.google.android.youtube.tvmusic # YouTube Music trên TV
+com.google.android.feedback # Gửi phản hồi cho Google
+com.google.android.tv.bugreportsender # Gửi báo lỗi của TV
+com.android.tv.feedbackconsent # Phản hồi/báo lỗi của TV
+com.google.android.tungsten.setupwraith # Hỗ trợ cài đặt ban đầu (đã xong)
+com.google.android.syncadapters.calendar # Đồng bộ lịch (TV không dùng)
+com.android.printspooler # Dịch vụ in ấn (TV không dùng)
+com.google.android.tvrecommendations # Gợi ý nội dung của Google TV
