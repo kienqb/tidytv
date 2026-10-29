@@ -30,6 +30,13 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val LAUNCHER_PKG = "com.gathin.tvhome"
         const val LAUNCHER_COMPONENT = "com.gathin.tvhome/.MainActivity"
+        // Google TV's stock Home pair, mirrored from CleanYourTV
+        // (Gathin23): launcherx is the Google TV Home; setupwraith's
+        // RecoveryActivity also registers as HOME with priority 1 and
+        // outranks a set-home choice, and shell cannot disable just
+        // that one component — so the source project disables the
+        // whole package alongside launcherx. Keep this pair in step
+        // with that source; do not improvise extra packages here.
         const val GOOGLE_TV_HOME = "com.google.android.apps.tv.launcherx"
         const val GOOGLE_TV_SETUP = "com.google.android.tungsten.setupwraith"
         // Staged on /sdcard, not /data/local/tmp: step 2's backup already
@@ -641,31 +648,90 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** Step 4 tail: set Home, enable the lock guards (password edition
-     * only), move to step 5. */
+    /** Who currently holds Home, per the package manager. */
+    private fun currentHome(m: TvAdb): String? = parseHome(m.exec(
+        "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
+
+    /** Live proof the new launcher exists on the TV: listed by
+     * `pm list packages` and not in the disabled list. */
+    private fun verifyNewLauncher(m: TvAdb): HomeSafety.LauncherState {
+        val installed = HomeSafety.parsePackageList(m.exec("pm list packages"))
+        val disabled = HomeSafety.parsePackageList(m.exec("pm list packages -d"))
+        return HomeSafety.launcherState(installed, disabled, LAUNCHER_PKG)
+    }
+
+    /**
+     * Step 5's hard gate — the owner's prerequisite after the Sony
+     * KD-55X80J incident (29 Oct 2026): the stock launcher may be
+     * disabled ONLY when the new launcher is verified live at click
+     * time: installed, enabled AND already holding Home. On the X80J
+     * the launcher was installed and set up, but Home was only "won"
+     * because the stock pair was already disabled — after a reboot
+     * the TV hung at the logo and had to be factory-reset.
+     */
+    private fun requireVerifyPass(m: TvAdb): Boolean {
+        val installed = HomeSafety.parsePackageList(m.exec("pm list packages"))
+        val disabled = HomeSafety.parsePackageList(m.exec("pm list packages -d"))
+        val state = HomeSafety.launcherState(installed, disabled, LAUNCHER_PKG)
+        val home = currentHome(m)
+        if (HomeSafety.mayDisableStockLauncher(installed, disabled, LAUNCHER_PKG, home)) {
+            log("✓ Kiểm chứng đạt: launcher mới có mặt, đang bật và đã là màn hình chính.")
+            return true
+        }
+        when (state) {
+            HomeSafety.LauncherState.NOT_INSTALLED -> {
+                log("✗ KIỂM CHỨNG KHÔNG ĐẠT: không tìm thấy launcher mới trên TV — app KHÔNG tắt launcher gốc. Hãy cài launcher ở bước 4 trước.")
+                toast("Chưa có launcher mới trên TV — không tắt launcher gốc.")
+            }
+            HomeSafety.LauncherState.DISABLED -> {
+                log("✗ KIỂM CHỨNG KHÔNG ĐẠT: launcher mới đang bị tắt trên TV — app KHÔNG tắt launcher gốc.")
+                toast("Launcher mới đang bị tắt — không tắt launcher gốc.")
+            }
+            HomeSafety.LauncherState.READY -> {
+                log("✗ KIỂM CHỨNG KHÔNG ĐẠT: launcher mới chưa là màn hình chính (đang là: ${home ?: "không rõ"}) — app KHÔNG tắt launcher gốc. Hãy bấm nút Home và chọn launcher mới làm màn hình chính trước.")
+                toast("Launcher mới chưa là màn hình chính — không tắt launcher gốc.")
+            }
+        }
+        return false
+    }
+
+    /** Step 4 tail: set the new launcher as Home right after install,
+     * verify it is really on the TV and holding Home, enable the lock
+     * guards (password edition only), move to step 5. */
     private fun finishInstall(m: TvAdb, choice: LauncherChoice) {
         m.exec("cmd package set-home-activity $LAUNCHER_COMPONENT")
-        val home = parseHome(m.exec(
-            "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
-        if (home == LAUNCHER_PKG) {
-            log("✓ Launcher đã là màn hình chính của TV.")
-        } else {
-            // Installed and set up, but the stock launcher still holds
-            // Home (some Android TV brands pin it). Disabling it is now
-            // a separate final step on the "Hoàn tất" screen, done only
-            // after the new launcher is fully in place.
-            log("Đã cài và thiết lập xong launcher — sang bước 5 để hoàn tất.")
+        val home = currentHome(m)
+        val state = verifyNewLauncher(m)
+        val verified = state == HomeSafety.LauncherState.READY
+        val won = home == LAUNCHER_PKG
+        when {
+            state == HomeSafety.LauncherState.NOT_INSTALLED ->
+                log("✗ KIỂM CHỨNG THẤT BẠI: cài xong nhưng không tìm thấy launcher mới trên TV. KHÔNG tắt launcher gốc ở bước 5 — hãy cài lại ở bước 4.")
+            state == HomeSafety.LauncherState.DISABLED ->
+                log("✗ KIỂM CHỨNG THẤT BẠI: launcher mới đang bị tắt trên TV. KHÔNG tắt launcher gốc ở bước 5.")
+            won ->
+                log("✓ Đã kiểm chứng: launcher mới có mặt, đang bật và đã là màn hình chính của TV.")
+            else ->
+                // Installed and set up, but the stock launcher still
+                // holds Home. Step 5 stays locked until the new
+                // launcher verifiably holds Home — the X80J rule:
+                // never disable the stock launcher before that.
+                log("✓ Đã kiểm chứng: launcher mới có mặt và đang bật trên TV — nhưng chưa là màn hình chính (đang là: ${home ?: "không rõ"}). Bước 5 sẽ không tắt launcher gốc cho tới khi kiểm chứng đạt.")
         }
         if (choice.lockGuards) {
             enableLockGuards(m)
         } else {
             log("Bản không mật khẩu không có bảo vệ khoá — bỏ qua bước bật 3 lớp bảo vệ.")
         }
-        val won = home == LAUNCHER_PKG
         ui {
-            findViewById<TextView>(R.id.doneText).text =
-                if (won) "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: nếu đây là Google TV đã tắt launcher gốc, ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
-                else "Đã cài và thiết lập xong launcher.\n\nNếu bấm nút Home vẫn về giao diện gốc: tích ô đúng loại TV bên dưới (Android TV hoặc Google TV) rồi bấm nút TẮT LAUNCHER tương ứng để hoàn tất.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+            findViewById<TextView>(R.id.doneText).text = when {
+                !verified ->
+                    "⚠ CHƯA KIỂM CHỨNG ĐƯỢC LAUNCHER MỚI TRÊN TV.\n\nTUYỆT ĐỐI KHÔNG tắt launcher gốc ở bước 5 — TV có thể mất màn hình chính và treo ở logo. Hãy quay lại bước 4 cài lại launcher, hoặc báo người hỗ trợ.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần."
+                won ->
+                    "Hoàn tất! Bấm nút Home trên remote để về màn hình chính mới.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+                else ->
+                    "Đã cài và kiểm chứng xong launcher mới (đã có mặt và đang bật trên TV), nhưng launcher mới CHƯA là màn hình chính.\n\n⚠ LƯU Ý QUAN TRỌNG: hãy bấm nút Home trên remote — nếu TV hỏi chọn màn hình chính, chọn launcher mới. Chỉ khi bấm Home thấy màn hình launcher mới thì bước 5 mới tắt được launcher gốc; app sẽ tự kiểm chứng lại ngay trước khi tắt.\n\nNếu bấm Home vẫn về giao diện gốc: cứ để TV dùng bình thường, KHÔNG cố tắt launcher gốc, và báo người hỗ trợ.\n\nLưu ý: ĐỪNG tắt Gỡ lỗi trên TV — đó là đường để khôi phục khi cần. Muốn trả TV về như cũ: kết nối lại bằng app này và bấm KHÔI PHỤC."
+            }
             showStep(5)
         }
     }
@@ -713,6 +779,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         runBg("Tắt launcher gốc") {
+            if (!requireVerifyPass(m)) return@runBg
             var home = parseHome(m.exec(
                 "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
             if (home == LAUNCHER_PKG) {
@@ -760,6 +827,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         runBg("Tắt launcher Google") {
+            if (!requireVerifyPass(m)) return@runBg
             var home = parseHome(m.exec(
                 "cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME"))
             if (home == LAUNCHER_PKG) {
